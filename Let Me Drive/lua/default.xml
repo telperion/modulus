@@ -1,0 +1,225 @@
+<ActorFrame><children>
+
+	<Layer
+		Type="Quad"
+		InitCommand="hidden,1"
+		OnCommand="sleep,1000"
+	/>
+	
+	<Layer
+		Type="Quad"
+		InitCommand="hidden,1"
+		OnCommand="%function(self)
+				-------------------------------------------------------------
+				-- Modeled pretty shamelessly after the WHY 401k structure --
+				-------------------------------------------------------------
+				
+				fgcurcommand = 1;
+				gbBPM = 220.0;
+				gbOFF = -0.029;
+				gbTime = 0;
+				gbInitMods = false;
+				--gbInc = 0;
+				
+				gbCurrentMessage = 1;
+				gbMessages = {
+				{38.412,'Molding1'},
+				{48.012,'Wiggle'},
+				{76.812,'Molding2'},
+				}
+				
+				-- Beat start, Beat end, Mods, Player specific
+				
+				gbMods = {
+				
+				--{0,0.700,'*10000 C0,*10000 Stealth','end'},
+				{0,2000,'2.18x,-999999% Cover','end'},
+				
+				-- ``Driven drop`` #1				
+				{112.00, 16.00, '*0.24 100% mini,*0.48 0.6x',						'len'},
+				{128.00, 16.00, '*1000.0 0.6x,*0.5 220% centered', 					'len'},
+				{143.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 reverse', 		'len'},
+				{144.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{159.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 no reverse', 	'len'},
+				{160.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{175.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 reverse', 		'len'},
+				{176.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{191.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 no reverse', 	'len'},
+				{192.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{207.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 reverse', 		'len'},
+				{208.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{223.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 no reverse', 	'len'},
+				{224.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{239.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 reverse', 		'len'},
+				{240.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{255.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 no reverse', 	'len'},
+				{256.00, 16.00, '*1.0 no mini,*2.0 2.18x,*12.0 0% centered,*4.0 no reverse,*1.0 no dark', 		'len'},
+				
+				-- ``Scary sample``
+				{288.00, 32.00, '*1000 90% stealth,*1000 50% tipsy',	'len'},
+				{289.00, 31.00, '*0.12 no stealth,*0.12 200% tipsy',	'len'},
+				{320.00,  1.00, '*4.0 no tipsy',						'len'},
+				
+				-- ``Hype man``
+				-- {352.00,128.00, '*1000 100% bumpy',		'len'},	
+				{416.00,  1.00, '*0.3 10% flip',		'len'},	
+				{417.00,  1.00, '*8.0 -30% flip',		'len'},	
+				{417.25,  1.00, '*0.6 no flip',			'len'},	
+				{424.00,  1.00, '*0.3 10% flip',		'len'},	
+				{425.00,  1.00, '*8.0 -30% flip',		'len'},	
+				{425.25,  1.00, '*0.6 no flip',			'len'},	
+				{432.00,  1.00, '*0.3 10% flip',		'len'},	
+				{433.00,  1.00, '*8.0 -30% flip',		'len'},	
+				{433.25,  1.00, '*0.6 no flip',			'len'},	
+				{448.00,  1.00, '*0.3 10% invert',		'len'},	
+				{449.00,  1.00, '*8.0 -60% invert',		'len'},	
+				{449.25,  1.00, '*0.6 no invert',		'len'},	
+				{456.00,  1.00, '*0.3 10% invert',		'len'},	
+				{457.00,  1.00, '*8.0 -60% invert',		'len'},	
+				{457.25,  1.00, '*0.6 no invert',		'len'},	
+				{464.00,  1.00, '*0.3 10% invert',		'len'},	
+				{465.00,  1.00, '*8.0 -60% invert',		'len'},	
+				{465.25,  1.00, '*0.6 no invert',		'len'},	
+				-- {480.00, 32.00, '*1.0 no bumpy',		'len'},				
+				
+				-- ``Driven drop`` #2				
+				{528.00, 16.00, '*0.24 100% mini,*0.48 0.6x',						'len'},
+				{544.00, 16.00, '*1000.0 0.6x,*0.5 220% centered', 					'len'},
+				{559.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 reverse', 		'len'},
+				{560.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{575.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 no reverse', 	'len'},
+				{576.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{591.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 reverse', 		'len'},
+				{592.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{606.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 no reverse,*1000 stealth', 	'len'},
+				{608.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark,*1.0 no stealth',	'len'},
+				{623.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 reverse', 		'len'},
+				{624.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{639.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 no reverse', 	'len'},
+				{640.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{655.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 reverse', 		'len'},
+				{656.00, 16.00, '*1000.0 0.6x,*0.5 220% centered,*1.0 no dark', 	'len'},
+				{671.00,  1.00, '*1000 dark,*12.0 -1% centered,*4.0 no reverse', 	'len'},
+				{672.00, 16.00, '*1.0 no mini,*2.0 2.18x,*12.0 0% centered,*4.0 no reverse,*1.0 no dark', 		'len'},
+				
+				-- ``Out ro``
+				{673.00, 63.00, '*0.12 96% dark,*0.06 96% stealth', 'len'},	
+				}
+				
+				gbPlayers = {};
+				
+				self:queuecommand('Update');
+			end"
+		
+		UpdateCommand="%function(self)
+		
+			-----------------------
+			-- Player mod resets --
+			-----------------------
+			if not gbInitMods then
+				GAMESTATE:ApplyGameCommand('mod,clearall')
+				gbInitMods = true;
+			end
+			
+			--------------------------------------------------------------------------------------------
+			-- Mod reader code originally coded by TaroNuke, remade to support end times and lengths. --
+			--------------------------------------------------------------------------------------------
+			for i,v in pairs(gbMods) do
+				startSec = v[1] * 60.0 / gbBPM - gbOFF;
+				  endSec = v[2] * 60.0 / gbBPM - gbOFF;				  
+				 diffSec = v[2] * 60.0 / gbBPM;
+				if gbTime >= startSec then
+					if (v[4] == 'len' and gbTime <= (startSec + diffSec)) or (v[4] == 'end' and gbTime <= endSec) then
+						if table.getn(v) == 5 then
+							GAMESTATE:ApplyGameCommand('mod,'..v[3],v[5]);
+						else
+							GAMESTATE:ApplyGameCommand('mod,'..v[3]);
+						end
+					end
+				end
+			end
+			
+			-- essential for setup
+ 			if GAMESTATE:GetSongBeat()>=0 and fgcurcommand == 1 then
+ 				
+ 				table.insert(gbPlayers,SCREENMAN:GetTopScreen():GetChild('PlayerP1'));
+ 				table.insert(gbPlayers,SCREENMAN:GetTopScreen():GetChild('PlayerP2'));
+ 				fgcurcommand = fgcurcommand + 1;
+-- 				
+-- 				SCREENMAN:GetTopScreen():GetChild('Overlay'):hidden(1);
+-- 				SCREENMAN:GetTopScreen():GetChild('Underlay'):hidden(1);
+-- 				for i,v in pairs(gbPlayers) do
+-- 					if v then
+-- 						SCREENMAN:GetTopScreen():GetChild('ScoreP'..i):hidden(1);
+-- 						SCREENMAN:GetTopScreen():GetChild('LifeP'..i):hidden(1);
+-- 					end
+-- 				end
+ 			end
+			
+			-- sample
+			if GAMESTATE:GetSongBeat()>=190 and fgcurcommand == 12 then
+				for i,v in pairs(gbPlayers) do
+					if v then
+						
+					end
+				end
+				fgcurcommand = fgcurcommand + 1;
+			end		
+			
+			-- ``Hype man``
+			if GAMESTATE:GetSongBeat()>=352 and GAMESTATE:GetSongBeat()<480 then
+				for i,v in pairs(gbPlayers) do
+					if v then
+						v:y(SCREEN_HEIGHT / 2.0 + math.sin(GAMESTATE:GetSongBeat() * 2.0 * math.pi) * SCREEN_HEIGHT / 48.0)
+					end
+				end
+				fgcurcommand = fgcurcommand + 1;
+			elseif GAMESTATE:GetSongBeat()>480 and fgcurcommand == 2 then				
+				for i,v in pairs(gbPlayers) do
+					if v then
+						v:y(SCREEN_HEIGHT / 2.0)
+					end
+				end
+				fgcurcommand = fgcurcommand + 1;
+			end
+			
+			self:queuecommand('Update2');
+			
+		end"
+
+
+		Update2Command="%function(self)
+		self:sleep(0.02);
+		self:queuecommand('Update');
+		end"
+
+		RearrangeCommand="%function(self)
+			SCREENMAN:GetTopScreen():SetDrawByZPosition(true);			
+			SCREENMAN:GetTopScreen():GetChild('SongBackground'):z(0);
+			SCREENMAN:GetTopScreen():GetChild('SongForeground'):z(1);			
+			SCREENMAN:GetTopScreen():GetChild('Overlay'):z(2);
+			Trace('Just set z for TopScreen children');
+			
+			for i,v in pairs(gbPlayers) do
+				if v then
+					
+				end
+			end
+			
+			if GAMESTATE:IsPlayerEnabled(0) then
+			   SCREENMAN:GetTopScreen():GetChild('PlayerP1'):z(5);
+			end
+			if GAMESTATE:IsPlayerEnabled(1) then
+			   SCREENMAN:GetTopScreen():GetChild('PlayerP2'):z(5);
+			end
+		end"
+	/>
+	
+	<BitmapText
+		Font="Common Normal"
+		Text="test"
+		OnCommand="x,SCREEN_CENTER_X;y,SCREEN_CENTER_Y;effectclock,music;playcommand,SetTime;hidden,1"
+		SetTimeCommand="%function(self) self:settext(self:GetSecsIntoEffect()); gbTime = tonumber(self:GetText()); self:sleep(0.02); self:queuecommand('SetTime'); end"
+	/>
+	
+</children></ActorFrame>
