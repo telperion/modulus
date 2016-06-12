@@ -36,13 +36,35 @@
 				gPavement = {}; 		-- eventually to contain paving stones
 				gSun = {};				-- eventually to contain glow rings
 				gSunGradient = {};
-				-- {{L, R}, {L-Rxx, R-Rxx}, {L-xGB, R-xGB}};
-				gFrond = {{nil, nil}, {nil, nil}, {nil, nil}};
-				gTrunk = {{nil, nil}, {nil, nil}, {nil, nil}};
+				-- {{L-Rxx, L, L-xGB}, {R-Rxx, R, R-xGB}};
+				gFrond = {{nil, nil, nil}, {nil, nil, nil}};
+				gTrunk = {{nil, nil, nil}, {nil, nil, nil}};
 				gGraphicsReady = false;
 				gGraphicsScale = 1.0 / math.min(1280 / SCREEN_WIDTH, 960 / SCREEN_HEIGHT);
 				
-				
+				-- Motion master parameters
+				gMotionTaps       	= {3.0, 5.0, 8.0, 13.0, 21.0, 34.0};
+				gMotionTapsRecip  	= {};
+				gMotionTapsPeriod 	= {};
+				gMotionTapsSign 	= {};
+				gMotionExtent = 0;
+				for i = 1, table.getn(gMotionTaps) do
+					table.insert(gMotionTapsRecip, 1, 1.0 / gMotionTaps[i]);
+					table.insert(gMotionTapsPeriod, 2.0 * math.pi / gMotionTaps[i]);
+					table.insert(gMotionTapsSign,   math.random(2) * 2 - 1);
+					gMotionExtent = gMotionExtent + 1.0 / gMotionTaps[i];
+				end	
+				MotionMaster = function(t)
+					motionResult = 0;
+					for i = 1, table.getn(gMotionTaps) do
+						motionResult = motionResult + gMotionTapsSign[i] * gMotionTapsRecip[i] * math.sin(gMotionTapsPeriod[i] * t);
+					end	
+					motionResult = motionResult / gMotionExtent;
+					motionResultIntermediate = math.exp(2.0 * motionResult);
+					motionResultBounded = (motionResultIntermediate - 1) / (motionResultIntermediate + 1);					
+					return motionResultBounded;
+				end;
+			
 				-- Beat start, Beat end, Mods, Player specific
 				
 				gMods = {
@@ -102,6 +124,7 @@
 --						end
 						origX = v:GetX();
 						v:x(SCREEN_CENTER_X);
+						v:addy(SCREEN_HEIGHT / -8.0);
 						v:GetChild('Judgment'):x(origX - SCREEN_CENTER_X);
 						v:GetChild('Combo'):x(origX - SCREEN_CENTER_X);
 						Trace('Player '..i..'\'s location is x='..v:GetX()..', y='..v:GetY()..'!');
@@ -124,16 +147,44 @@
 				Trace('Heaven sent');
 				for i,v in pairs(gSun) do
 					Trace('SunGlow '..i..'!');
-					v:decelerate(8 + 3 * i);
+					v:decelerate(18 + 0.5 * i);
 					v:y(SCREEN_HEIGHT * 0.9);
 				end
 				for i,v in pairs(gPavement) do
 					Trace('PavementStone '..i..'!');
-					v:decelerate(2.0 + i);
 					v:y(SCREEN_HEIGHT * 0.8 + SCREEN_HEIGHT / 60.0 * (i - 0.5));
 				end
 				gGraphicsReady = true;		
 				SCREENMAN:GetTopScreen():SetDrawByZPosition(true);	
+			end
+			
+			
+			if gGraphicsReady then	
+				gBeat = (gTime - gOFF) * gBPM / 60.0;
+				gBeatSlow = gBeat / 2.0;
+				commonSway = MotionMaster(gBeatSlow);
+				for i,v in pairs(gPavement) do
+					v:x( MotionMaster(gBeatSlow - i / 12.0) * SCREEN_WIDTH * 0.3 + SCREEN_CENTER_X );
+				end			
+				for i,v in pairs(gPlayers) do
+					if v then
+						newPlayerX = commonSway * SCREEN_WIDTH * 0.3 + SCREEN_CENTER_X;
+						newJCX = SCREEN_WIDTH * (0.5 * i - 0.25);
+						v:x( newPlayerX );
+						v:GetChild('Judgment'):x(newJCX - newPlayerX);
+						v:GetChild('Combo'):x(newJCX - newPlayerX);
+					end
+				end
+				for i,vGroup in pairs(gTrunk) do
+					for j,v in pairs(vGroup) do
+						v:x( MotionMaster(gBeatSlow + 0.1 - j * 0.05) * SCREEN_WIDTH * 0.05 + SCREEN_WIDTH * (0.5 * i - 0.25) );
+					end
+				end
+				for i,vGroup in pairs(gFrond) do
+					for j,v in pairs(vGroup) do
+						v:x( MotionMaster(gBeatSlow + 0.1 - j * 0.05) * SCREEN_WIDTH * 0.05 + SCREEN_WIDTH * (0.5 * i - 0.25) );
+					end
+				end
 			end
 			
 			self:queuecommand('Update2');
@@ -323,7 +374,7 @@
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.03);
 			self:blend('add');
-			gtrunkL = self;
+			gTrunk[1][3] = self;
 		end"
 	/>
 	<!-- Trunk, R (xGB) -->
@@ -335,7 +386,7 @@
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.03);
 			self:blend('add');
-			gtrunkL = self;
+			gTrunk[2][3] = self;
 		end"
 	/>
 	
@@ -348,7 +399,7 @@
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.04);
 			self:blend('add');
-			gtrunkL = self;
+			gTrunk[1][1] = self;
 		end"
 	/>
 	<!-- Trunk, R (Rxx) -->
@@ -360,7 +411,7 @@
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.04);
 			self:blend('add');
-			gtrunkL = self;
+			gTrunk[2][1] = self;
 		end"
 	/>
 	
@@ -373,7 +424,7 @@
 			self:x(SCREEN_WIDTH * 0.25);
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.05);
-			gtrunkL = self;
+			gTrunk[1][2] = self;
 		end"
 	/>
 	<!-- Trunk, R (sharp) -->
@@ -384,30 +435,7 @@
 			self:x(SCREEN_WIDTH * 0.75);
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.05);
-			gtrunkL = self;
-		end"
-	/>
-	
-	<!-- Trunk, L (sharp) -->
-	<Layer
-		File="letmedrv-trunk-L.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.25);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.05);
-			gtrunkL = self;
-		end"
-	/>
-	<!-- Trunk, R (sharp) -->
-	<Layer
-		File="letmedrv-trunk-R.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.75);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.05);
-			gtrunkL = self;
+			gTrunk[2][2] = self;
 		end"
 	/>
 	
@@ -421,7 +449,7 @@
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.03);
 			self:blend('add');
-			gFrondL = self;
+			gFrond[1][3] = self;
 		end"
 	/>
 	<!-- Frond, R (xGB) -->
@@ -433,7 +461,7 @@
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.03);
 			self:blend('add');
-			gFrondL = self;
+			gFrond[2][3] = self;
 		end"
 	/>
 	
@@ -446,7 +474,7 @@
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.04);
 			self:blend('add');
-			gFrondL = self;
+			gFrond[1][1] = self;
 		end"
 	/>
 	<!-- Frond, R (Rxx) -->
@@ -458,7 +486,7 @@
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.04);
 			self:blend('add');
-			gFrondL = self;
+			gFrond[2][1] = self;
 		end"
 	/>
 	
@@ -471,7 +499,8 @@
 			self:x(SCREEN_WIDTH * 0.25);
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.05);
-			gFrondL = self;
+			self:diffuse(255,255,255,0.7);
+			gFrond[1][2] = self;
 		end"
 	/>
 	<!-- Frond, R (sharp) -->
@@ -482,30 +511,8 @@
 			self:x(SCREEN_WIDTH * 0.75);
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.05);
-			gFrondL = self;
-		end"
-	/>
-	
-	<!-- Frond, L (sharp) -->
-	<Layer
-		File="letmedrv-frond-L.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.25);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.05);
-			gFrondL = self;
-		end"
-	/>
-	<!-- Frond, R (sharp) -->
-	<Layer
-		File="letmedrv-frond-R.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.75);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.05);
-			gFrondL = self;
+			self:diffuse(255,255,255,0.7);
+			gFrond[2][2] = self;
 		end"
 	/>
 	
