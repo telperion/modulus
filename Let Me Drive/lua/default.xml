@@ -28,6 +28,22 @@
 				{76.812,'Molding2'},
 				}
 				
+				-- Handles to graphical actors
+				gHeaven = nil;
+				gHeavenMuted = nil;
+				gEarth = nil;
+				gEarthGlow = nil;
+				gPavement = {}; 		-- eventually to contain paving stones
+				gSun = nil;
+				gSunGlow = nil;
+				gSunGradient = nil;
+				-- {{L, R}, {L-Rxx, R-Rxx}, {L-xGB, R-xGB}};
+				gFrond = {{nil, nil}, {nil, nil}, {nil, nil}};
+				gTrunk = {{nil, nil}, {nil, nil}, {nil, nil}};
+				gGraphicsReady = false;
+				gGraphicsScale = 1;
+				
+				
 				-- Beat start, Beat end, Mods, Player specific
 				
 				gMods = {
@@ -71,8 +87,7 @@
 			end
 			
 			-- essential for setup
- 			if GAMESTATE:GetSongBeat()>=0 and fgcurcommand == 1 then
- 				
+ 			if GAMESTATE:GetSongBeat()>=0 and fgcurcommand == 1 then	 				
  				table.insert(gPlayers,SCREENMAN:GetTopScreen():GetChild('PlayerP1'));
  				table.insert(gPlayers,SCREENMAN:GetTopScreen():GetChild('PlayerP2'));
  				fgcurcommand = fgcurcommand + 1;
@@ -91,6 +106,7 @@
 						v:GetChild('Judgment'):x(origX - SCREEN_CENTER_X);
 						v:GetChild('Combo'):x(origX - SCREEN_CENTER_X);
 						Trace('Player '..i..'\'s location is x='..v:GetX()..', y='..v:GetY()..'!');
+						v:z(1);
  					end
  				end
  			end
@@ -103,6 +119,13 @@
 					end
 				end
 				fgcurcommand = fgcurcommand + 1;
+			end
+			
+			if gHeaven ~= nil and not gGraphicsReady then
+				Trace('Heaven sent');
+				gHeaven:addy(80);
+				gGraphicsReady = true;		
+				SCREENMAN:GetTopScreen():SetDrawByZPosition(true);	
 			end
 			
 			self:queuecommand('Update2');
@@ -143,5 +166,77 @@
 		OnCommand="x,SCREEN_CENTER_X;y,SCREEN_CENTER_Y;effectclock,music;playcommand,SetTime;hidden,1"
 		SetTimeCommand="%function(self) self:settext(self:GetSecsIntoEffect()); gTime = tonumber(self:GetText()); self:sleep(1.0 / 45.0); self:queuecommand('SetTime'); end"
 	/>
+	
+	<!-- Heaven (muted color) -->
+	<Layer
+		File="letmedrv-bg-muted.png"
+		OnCommand="%function(self)
+			gGraphicsScale = 1.0 / math.min(self:GetWidth() / SCREEN_WIDTH, self:GetHeight() / SCREEN_HEIGHT);
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH / 2);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.00);
+			gHeavenMuted = self;
+				self:diffuse(255,255,255,0);
+			self:sleep(1000);
+		end"
+	/>
+	<!-- Heaven (full color) -->
+	<Layer
+		File="letmedrv-bg.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH / 2);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.01);
+			gHeaven = self;
+			self:diffuse(255,255,255,0);
+			--self:decelerate(20);
+			--self:diffusealpha(1);
+			self:sleep(1000);
+		end"
+	/>
+	
+	
+	<!-- Sun (sharp) -->
+	<Layer
+		File="letmedrv-sun-white.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH / 2);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.02);
+			gSun = self;
+			self:sleep(1000);
+		end"
+	/>
+	<!-- Sun (glow) -->
+	<Layer
+		File="letmedrv-sun-bloom.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH / 2);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.03);
+			self:blend('noeffect');
+			self:zwrite(1);
+			gSunGlow = self;
+			self:sleep(1000);
+		end"
+	/>
+	<!-- Sun (gradient) -->
+	<Layer
+		File="letmedrv-sun-grad.png"
+		OnCommand="%function(self)
+			self:zoom(0.333);
+			self:x(SCREEN_WIDTH / 2);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.04);
+			self:ztestmode('writeonpass');
+			gSunGradient = self;
+			self:sleep(1000);
+		end"
+	/>
+	
 	
 </children></ActorFrame>
