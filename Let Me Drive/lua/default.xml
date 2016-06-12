@@ -34,14 +34,13 @@
 				gEarth = nil;
 				gEarthGlow = nil;
 				gPavement = {}; 		-- eventually to contain paving stones
-				gSun = nil;
-				gSunGlow = nil;
-				gSunGradient = nil;
+				gSun = {};				-- eventually to contain glow rings
+				gSunGradient = {};
 				-- {{L, R}, {L-Rxx, R-Rxx}, {L-xGB, R-xGB}};
 				gFrond = {{nil, nil}, {nil, nil}, {nil, nil}};
 				gTrunk = {{nil, nil}, {nil, nil}, {nil, nil}};
 				gGraphicsReady = false;
-				gGraphicsScale = 1;
+				gGraphicsScale = 1.0 / math.min(1280 / SCREEN_WIDTH, 960 / SCREEN_HEIGHT);
 				
 				
 				-- Beat start, Beat end, Mods, Player specific
@@ -123,7 +122,11 @@
 			
 			if gHeaven ~= nil and not gGraphicsReady then
 				Trace('Heaven sent');
-				gHeaven:addy(80);
+				for i,v in pairs(gSun) do
+					Trace('SunGlow '..i..'!');
+					v:decelerate(3 + 0.5 * i);
+					v:y(SCREEN_HEIGHT * 0.9);
+				end
 				gGraphicsReady = true;		
 				SCREENMAN:GetTopScreen():SetDrawByZPosition(true);	
 			end
@@ -171,14 +174,14 @@
 	<Layer
 		File="letmedrv-bg-muted.png"
 		OnCommand="%function(self)
-			gGraphicsScale = 1.0 / math.min(self:GetWidth() / SCREEN_WIDTH, self:GetHeight() / SCREEN_HEIGHT);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.00);
 			gHeavenMuted = self;
-				self:diffuse(255,255,255,0);
-			self:sleep(1000);
+			self:diffuse(255,255,255,0);
+			self:decelerate(20);
+			self:diffusealpha(1);
 		end"
 	/>
 	<!-- Heaven (full color) -->
@@ -190,53 +193,116 @@
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.01);
 			gHeaven = self;
-			self:diffuse(255,255,255,0);
-			--self:decelerate(20);
-			--self:diffusealpha(1);
-			self:sleep(1000);
 		end"
 	/>
 	
-	
-	<!-- Sun (sharp) -->
-	<Layer
-		File="letmedrv-sun-white.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.02);
-			gSun = self;
-			self:sleep(1000);
-		end"
-	/>
-	<!-- Sun (glow) -->
-	<Layer
-		File="letmedrv-sun-bloom.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.03);
-			self:blend('noeffect');
-			self:zwrite(1);
-			gSunGlow = self;
-			self:sleep(1000);
-		end"
-	/>
-	<!-- Sun (gradient) -->
-	<Layer
-		File="letmedrv-sun-grad.png"
-		OnCommand="%function(self)
-			self:zoom(0.333);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.04);
-			self:ztestmode('writeonpass');
-			gSunGradient = self;
-			self:sleep(1000);
-		end"
-	/>
+		<!-- Sun (glow) -->
+		<Layer
+			File="letmedrv-sun-glow-0.png"
+			OnCommand="%function(self)
+				self:zoom(gGraphicsScale);
+				self:x(SCREEN_WIDTH / 2);
+				self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
+				self:z(0.021);
+				self:clearzbuffer(1);
+				self:blend('noeffect');
+				self:zwrite(1);
+				table.insert(gSun, self);
+			end"
+		/>
+		<!-- Sun (gradient) -->
+		<Layer
+			File="letmedrv-sun-grad.png"
+			OnCommand="%function(self)
+				self:zoom(gGraphicsScale);
+				self:x(SCREEN_WIDTH / 2);
+				self:y(SCREEN_HEIGHT / 2);
+				self:z(0.022);
+				self:ztestmode('writeonfail');
+				table.insert(gSunGradient, self);
+				self:diffuse(255,255,255,0.1);
+			end"
+		/>
+		<!-- Sun (glow) -->
+		<Layer
+			File="letmedrv-sun-glow-51.png"
+			OnCommand="%function(self)
+				self:zoom(gGraphicsScale);
+				self:x(SCREEN_WIDTH / 2);
+				self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
+				self:z(0.023);
+				self:clearzbuffer(1);
+				self:blend('noeffect');
+				self:zwrite(1);
+				table.insert(gSun, self);
+			end"
+		/>
+		<!-- Sun (gradient) -->
+		<Layer
+			File="letmedrv-sun-grad.png"
+			OnCommand="%function(self)
+				self:zoom(gGraphicsScale);
+				self:x(SCREEN_WIDTH / 2);
+				self:y(SCREEN_HEIGHT / 2);
+				self:z(0.024);
+				self:ztestmode('writeonfail');
+				table.insert(gSunGradient, self);
+				self:diffuse(255,255,255,0.3);
+			end"
+		/>
+		<!-- Sun (glow) -->
+		<Layer
+			File="letmedrv-sun-glow-170.png"
+			OnCommand="%function(self)
+				self:zoom(gGraphicsScale);
+				self:x(SCREEN_WIDTH / 2);
+				self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
+				self:z(0.025);
+				self:clearzbuffer(1);
+				self:blend('noeffect');
+				self:zwrite(1);
+				table.insert(gSun, self);
+			end"
+		/>
+		<!-- Sun (gradient) -->
+		<Layer
+			File="letmedrv-sun-grad.png"
+			OnCommand="%function(self)
+				self:zoom(gGraphicsScale);
+				self:x(SCREEN_WIDTH / 2);
+				self:y(SCREEN_HEIGHT / 2);
+				self:z(0.026);
+				self:ztestmode('writeonfail');
+				table.insert(gSunGradient, self);
+				self:diffuse(255,255,255,0.5);
+			end"
+		/>
+		<!-- Sun (sharp) -->
+		<Layer
+			File="letmedrv-sun-white.png"
+			OnCommand="%function(self)
+				self:zoom(gGraphicsScale);
+				self:x(SCREEN_WIDTH / 2);
+				self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
+				self:z(0.027);
+				self:clearzbuffer(1);
+				self:blend('noeffect');
+				self:zwrite(1);
+				table.insert(gSun, self);
+			end"
+		/>
+		<!-- Sun (gradient) -->
+		<Layer
+			File="letmedrv-sun-grad.png"
+			OnCommand="%function(self)
+				self:zoom(gGraphicsScale);
+				self:x(SCREEN_WIDTH / 2);
+				self:y(SCREEN_HEIGHT / 2);
+				self:z(0.028);
+				self:ztestmode('writeonfail');
+				table.insert(gSunGradient, self);
+			end"
+		/>
 	
 	
 </children></ActorFrame>
