@@ -43,7 +43,10 @@
 				gGraphicsScale = 1.0 / math.min(1280 / SCREEN_WIDTH, 960 / SCREEN_HEIGHT);
 				
 				-- Motion master parameters
-				gMotionTaps       	= {3.0, 5.0, 8.0, 13.0, 21.0, 34.0};
+				gMoving				= false;
+				gDriving			= 0;
+				gMotionEase			= 0.0;
+				gMotionTaps       	= {5.0, 8.0, 13.0, 21.0, 34.0};
 				gMotionTapsRecip  	= {};
 				gMotionTapsPeriod 	= {};
 				gMotionTapsSign 	= {};
@@ -70,8 +73,15 @@
 				gMods = {
 				
 				--{0,0.700,'*10000 C0,*10000 Stealth','end'},
-				{0,2000,'2.625x,-999999% Cover','end'},
-					
+				{0,   40,  '2.625x,-999999% Cover,*1000 dark','end'},
+				{40,  72,  '*0.1 no dark','end'},
+				{272, 336, '*1000 dark','end'},
+				{336, 340, '*0.3 no dark','end'},
+				{272, 336, '*1000 dark','end'},
+				{336, 340, '*0.3 no dark','end'},
+				{344, 352, '*0.5 dark','end'},
+				{352, 356, '*0.3 no dark','end'},
+				{544, 560, '*1000 dark','end'},
 				}
 				
 				gPlayers = {};
@@ -122,15 +132,17 @@
 --						for k,m in pairs(getmetatable(v)) do
 --							Trace('Player has field '..k..'!');
 --						end
-						origX = v:GetX();
+						origX = SCREEN_WIDTH * (0.5 * i - 0.25);
 						v:x(SCREEN_CENTER_X);
 						v:addy(SCREEN_HEIGHT / -8.0);
 						v:GetChild('Judgment'):x(origX - SCREEN_CENTER_X);
-						v:GetChild('Combo'):x(origX - SCREEN_CENTER_X);
+						v:GetChild('Combo'):hidden(1);
 						Trace('Player '..i..'\'s location is x='..v:GetX()..', y='..v:GetY()..'!');
 						v:z(1);
  					end
  				end
+				
+				SCREENMAN:GetTopScreen():SetDrawByZPosition(true);	
  			end
 			
 			-- sample
@@ -142,6 +154,43 @@
 				end
 				fgcurcommand = fgcurcommand + 1;
 			end
+			
+			
+			gBeat = GAMESTATE:GetSongBeat();
+			if gBeat >= 136 and gBeat < 144 then
+				gMoving = true;
+				gMotionEase = (gBeat - 136) / 8.0;
+			elseif gBeat >= 144 and gBeat < 264 then
+				gMoving = true;
+				gMotionEase = 1.0;
+			elseif gBeat >= 264 and gBeat < 272 then
+				gMoving = true;
+				gMotionEase = (272 - gBeat) / 8.0;
+			elseif gBeat >= 272 and gBeat < 432 then
+				gMoving = false;
+				gMotionEase = 0.0;
+				
+			elseif gBeat >= 432 and gBeat < 440 then
+				gMoving = true;
+				gMotionEase = (gBeat - 432) / 8.0;
+			elseif gBeat >= 440 and gBeat < 528 then
+				gMoving = true;
+				gMotionEase = 1.0;
+			elseif gBeat >= 528 and gBeat < 544 then
+				gMoving = true;
+				gMotionEase = (gBeat - 528) / 16.0;
+				gMotionEase = 1.0 - gMotionEase*gMotionEase;
+			elseif gBeat >= 544 then
+				gMoving = false;
+				gMotionEase = 0.0;
+				
+			else	
+--				gMoving = false;
+--				gMotionEase = 0.0;
+			end
+			
+			
+			
 			
 			if gHeaven ~= nil and not gGraphicsReady then
 				Trace('Heaven sent');
@@ -155,34 +204,44 @@
 					v:y(SCREEN_HEIGHT * 0.8 + SCREEN_HEIGHT / 60.0 * (i - 0.5));
 				end
 				gGraphicsReady = true;		
-				SCREENMAN:GetTopScreen():SetDrawByZPosition(true);	
 			end
 			
 			
-			if gGraphicsReady then	
-				gBeat = (gTime - gOFF) * gBPM / 60.0;
-				gBeatSlow = gBeat / 2.0;
-				commonSway = MotionMaster(gBeatSlow);
+			if gGraphicsReady then
+				gDriving = gDriving + 1;
 				for i,v in pairs(gPavement) do
-					v:x( MotionMaster(gBeatSlow - i / 12.0) * SCREEN_WIDTH * 0.3 + SCREEN_CENTER_X );
-				end			
-				for i,v in pairs(gPlayers) do
-					if v then
-						newPlayerX = commonSway * SCREEN_WIDTH * 0.3 + SCREEN_CENTER_X;
-						newJCX = SCREEN_WIDTH * (0.5 * i - 0.25);
-						v:x( newPlayerX );
-						v:GetChild('Judgment'):x(newJCX - newPlayerX);
-						v:GetChild('Combo'):x(newJCX - newPlayerX);
-					end
+					gApparentIndex = (i + gDriving);
+					gApparentIndex = gApparentIndex - math.floor(gApparentIndex/12)*12;
+					v:zoomx(gGraphicsScale * (1.0 + gApparentIndex / 12.0));
+					v:y(SCREEN_HEIGHT * 0.8 + SCREEN_HEIGHT / 60.0 * (gApparentIndex + 0.5));
 				end
-				for i,vGroup in pairs(gTrunk) do
-					for j,v in pairs(vGroup) do
-						v:x( MotionMaster(gBeatSlow + 0.1 - j * 0.05) * SCREEN_WIDTH * 0.05 + SCREEN_WIDTH * (0.5 * i - 0.25) );
+				
+				
+				if gMoving then
+					gBeatSlow = gBeat;
+					commonSway = MotionMaster(gBeatSlow);
+					for i,v in pairs(gPavement) do
+						gApparentIndex = (i + gDriving);
+						gApparentIndex = gApparentIndex - math.floor(gApparentIndex/12)*12;
+						v:x( gMotionEase * MotionMaster(gBeatSlow - gApparentIndex / 6.0) * SCREEN_WIDTH * 0.3 + SCREEN_CENTER_X );
+					end			
+					for i,v in pairs(gPlayers) do
+						if v then
+							newPlayerX = gMotionEase * commonSway * SCREEN_WIDTH * 0.3 + SCREEN_CENTER_X;
+							newJCX = SCREEN_WIDTH * (0.5 * i - 0.25);
+							v:x( newPlayerX );
+							v:GetChild('Judgment'):x(newJCX - newPlayerX);
+						end
 					end
-				end
-				for i,vGroup in pairs(gFrond) do
-					for j,v in pairs(vGroup) do
-						v:x( MotionMaster(gBeatSlow + 0.1 - j * 0.05) * SCREEN_WIDTH * 0.05 + SCREEN_WIDTH * (0.5 * i - 0.25) );
+					for i,vGroup in pairs(gTrunk) do
+						for j,v in pairs(vGroup) do
+							v:x( gMotionEase * MotionMaster(gBeatSlow + 0.1 - j * 0.05) * SCREEN_WIDTH * 0.05 + SCREEN_WIDTH * (0.5 * i - 0.25) );
+						end
+					end
+					for i,vGroup in pairs(gFrond) do
+						for j,v in pairs(vGroup) do
+							v:x( gMotionEase * MotionMaster(gBeatSlow + 0.1 - j * 0.05) * SCREEN_WIDTH * 0.05 + SCREEN_WIDTH * (0.5 * i - 0.25) );
+						end
 					end
 				end
 			end
@@ -518,11 +577,11 @@
 	
 	
 	<!-- Earth -->
-	<Quad
+	<<Layer
+		File="blacksquare.png"
 		OnCommand="%function(self)
 			self:stretchto(0, SCREEN_HEIGHT * 0.8, SCREEN_WIDTH, SCREEN_HEIGHT);
-			self:z(0.06);
-			self:diffuse(0,0,0,0.3);			
+			self:z(1);
 			gEarth = self;
 		end"
 	/>
@@ -535,7 +594,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
@@ -545,7 +604,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
@@ -555,7 +614,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
@@ -565,7 +624,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
@@ -575,7 +634,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
@@ -585,7 +644,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
@@ -595,7 +654,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
@@ -605,7 +664,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
@@ -615,7 +674,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
@@ -625,7 +684,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
@@ -635,7 +694,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
@@ -645,7 +704,7 @@
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);
 			self:y(SCREEN_HEIGHT);
-			self:z(0.07);
+			self:z(1.1);
 			table.insert(gPavement, self);
 		end"
 	/>
