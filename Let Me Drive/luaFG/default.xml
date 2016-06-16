@@ -1,5 +1,9 @@
 <ActorFrame><children>
 
+	<!--	I'M THE FOREGROUND	  -->
+	<!--	I'M THE FOREGROUND	  -->
+	<!--	I'M THE FOREGROUND	  -->
+
 	<Layer
 		Type="Quad"
 		InitCommand="hidden,1"
@@ -8,8 +12,9 @@
 	
 	<Layer
 		Type="Quad"
-		InitCommand="hidden,1"
-		OnCommand="%function(self)
+		InitCommand="%function(self)
+				self:hidden(1);
+				
 				-------------------------------------------------------------
 				-- Modeled pretty shamelessly after the WHY 401k structure --
 				-------------------------------------------------------------
@@ -86,6 +91,8 @@
 				
 				gPlayers = {};
 				
+				SCREENMAN:GetTopScreen():SetDrawByZPosition(true);	
+				
 				self:queuecommand('Update');
 			end"
 		
@@ -118,7 +125,7 @@
 			end
 			
 			-- essential for setup
- 			if GAMESTATE:GetSongBeat()>=0 and fgcurcommand == 1 then	 				
+ 			if GAMESTATE:GetSongBeat()>=0 and fgcurcommand == 1 then		
  				table.insert(gPlayers,SCREENMAN:GetTopScreen():GetChild('PlayerP1'));
  				table.insert(gPlayers,SCREENMAN:GetTopScreen():GetChild('PlayerP2'));
  				fgcurcommand = fgcurcommand + 1;
@@ -141,8 +148,6 @@
 						v:z(1);
  					end
  				end
-				
-				SCREENMAN:GetTopScreen():SetDrawByZPosition(true);	
  			end
 			
 			-- sample
@@ -192,8 +197,8 @@
 			
 			
 			
-			if gHeaven ~= nil and not gGraphicsReady then
-				Trace('Heaven sent');
+			if gEarth ~= nil and not gGraphicsReady then
+				Trace('Earth formed');
 				for i,v in pairs(gSun) do
 					Trace('SunGlow '..i..'!');
 					v:decelerate(18 + 0.5 * i);
@@ -235,12 +240,12 @@
 					end
 					for i,vGroup in pairs(gTrunk) do
 						for j,v in pairs(vGroup) do
-							v:x( gMotionEase * MotionMaster(gBeatSlow + 0.1 - j * 0.05) * SCREEN_WIDTH * 0.05 + SCREEN_WIDTH * (0.5 * i - 0.25) );
+							v:x( gMotionEase * MotionMaster(gBeatSlow + 0.1 - j * 0.25) * SCREEN_WIDTH * 0.05 + SCREEN_WIDTH * (0.5 * i - 0.25) );
 						end
 					end
 					for i,vGroup in pairs(gFrond) do
 						for j,v in pairs(vGroup) do
-							v:x( gMotionEase * MotionMaster(gBeatSlow + 0.1 - j * 0.05) * SCREEN_WIDTH * 0.05 + SCREEN_WIDTH * (0.5 * i - 0.25) );
+							v:x( gMotionEase * MotionMaster(gBeatSlow + 0.1 - j * 0.25) * SCREEN_WIDTH * 0.05 + SCREEN_WIDTH * (0.5 * i - 0.25) );
 						end
 					end
 				end
@@ -252,29 +257,8 @@
 
 
 		Update2Command="%function(self)
-		self:sleep(1.0 / 45.0);
-		self:queuecommand('Update');
-		end"
-
-		RearrangeCommand="%function(self)
-			SCREENMAN:GetTopScreen():SetDrawByZPosition(true);			
-			SCREENMAN:GetTopScreen():GetChild('SongBackground'):z(0);
-			SCREENMAN:GetTopScreen():GetChild('SongForeground'):z(1);			
-			SCREENMAN:GetTopScreen():GetChild('Overlay'):z(2);
-			Trace('Just set z for TopScreen children');
-			
-			for i,v in pairs(gPlayers) do
-				if v then
-					
-				end
-			end
-			
-			if GAMESTATE:IsPlayerEnabled(0) then
-			   SCREENMAN:GetTopScreen():GetChild('PlayerP1'):z(5);
-			end
-			if GAMESTATE:IsPlayerEnabled(1) then
-			   SCREENMAN:GetTopScreen():GetChild('PlayerP2'):z(5);
-			end
+			self:sleep(0.02);
+			self:queuecommand('Update');
 		end"
 	/>
 	
@@ -282,297 +266,7 @@
 		Font="Common Normal"
 		Text="test"
 		OnCommand="x,SCREEN_CENTER_X;y,SCREEN_CENTER_Y;effectclock,music;playcommand,SetTime;hidden,1"
-		SetTimeCommand="%function(self) self:settext(self:GetSecsIntoEffect()); gTime = tonumber(self:GetText()); self:sleep(1.0 / 45.0); self:queuecommand('SetTime'); end"
-	/>
-	
-	
-	
-	
-	<!-- Heaven (muted color) -->
-	<Layer
-		File="letmedrv-bg-muted.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.00);
-			gHeavenMuted = self;
-		end"
-	/>
-	<!-- Heaven (full color) -->
-	<Layer
-		File="letmedrv-bg.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.01);
-			gHeaven = self;
-			self:diffuse(255,255,255,0);
-			self:decelerate(20);
-			self:diffusealpha(1);
-		end"
-	/>
-	
-	
-	<!-- Sun (glow) -->
-	<Layer
-		File="letmedrv-sun-glow-0.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
-			self:z(0.021);
-			self:clearzbuffer(1);
-			self:blend('noeffect');
-			self:zwrite(1);
-			table.insert(gSun, self);
-		end"
-	/>
-	<!-- Sun (gradient) -->
-	<Layer
-		File="letmedrv-sun-grad.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.022);
-			self:ztestmode('writeonfail');
-			table.insert(gSunGradient, self);
-			self:diffuse(255,255,255,0.1);
-		end"
-	/>
-	<!-- Sun (glow) -->
-	<Layer
-		File="letmedrv-sun-glow-51.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
-			self:z(0.023);
-			self:clearzbuffer(1);
-			self:blend('noeffect');
-			self:zwrite(1);
-			table.insert(gSun, self);
-		end"
-	/>
-	<!-- Sun (gradient) -->
-	<Layer
-		File="letmedrv-sun-grad.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.024);
-			self:ztestmode('writeonfail');
-			table.insert(gSunGradient, self);
-			self:diffuse(255,255,255,0.3);
-		end"
-	/>
-	<!-- Sun (glow) -->
-	<Layer
-		File="letmedrv-sun-glow-170.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
-			self:z(0.025);
-			self:clearzbuffer(1);
-			self:blend('noeffect');
-			self:zwrite(1);
-			table.insert(gSun, self);
-		end"
-	/>
-	<!-- Sun (gradient) -->
-	<Layer
-		File="letmedrv-sun-grad.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.026);
-			self:ztestmode('writeonfail');
-			table.insert(gSunGradient, self);
-			self:diffuse(255,255,255,0.5);
-		end"
-	/>
-	<!-- Sun (sharp) -->
-	<Layer
-		File="letmedrv-sun-white.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
-			self:z(0.027);
-			self:clearzbuffer(1);
-			self:blend('noeffect');
-			self:zwrite(1);
-			table.insert(gSun, self);
-		end"
-	/>
-	<!-- Sun (gradient) -->
-	<Layer
-		File="letmedrv-sun-grad.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.028);
-			self:ztestmode('writeonfail');
-			table.insert(gSunGradient, self);
-		end"
-	/>
-	
-	
-	<!-- Trunk, L (xGB) -->
-	<Layer
-		File="letmedrv-trunk-L-xGB.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.25);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.03);
-			self:blend('add');
-			gTrunk[1][3] = self;
-		end"
-	/>
-	<!-- Trunk, R (xGB) -->
-	<Layer
-		File="letmedrv-trunk-R-xGB.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.75);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.03);
-			self:blend('add');
-			gTrunk[2][3] = self;
-		end"
-	/>
-	
-	<!-- Trunk, L (Rxx) -->
-	<Layer
-		File="letmedrv-trunk-L-Rxx.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.25);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.04);
-			self:blend('add');
-			gTrunk[1][1] = self;
-		end"
-	/>
-	<!-- Trunk, R (Rxx) -->
-	<Layer
-		File="letmedrv-trunk-R-Rxx.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.75);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.04);
-			self:blend('add');
-			gTrunk[2][1] = self;
-		end"
-	/>
-	
-	
-	<!-- Trunk, L (sharp) -->
-	<Layer
-		File="letmedrv-trunk-L.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.25);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.05);
-			gTrunk[1][2] = self;
-		end"
-	/>
-	<!-- Trunk, R (sharp) -->
-	<Layer
-		File="letmedrv-trunk-R.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.75);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.05);
-			gTrunk[2][2] = self;
-		end"
-	/>
-	
-	
-	<!-- Frond, L (xGB) -->
-	<Layer
-		File="letmedrv-frond-L-xGB.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.25);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.03);
-			self:blend('add');
-			gFrond[1][3] = self;
-		end"
-	/>
-	<!-- Frond, R (xGB) -->
-	<Layer
-		File="letmedrv-frond-R-xGB.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.75);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.03);
-			self:blend('add');
-			gFrond[2][3] = self;
-		end"
-	/>
-	
-	<!-- Frond, L (Rxx) -->
-	<Layer
-		File="letmedrv-frond-L-Rxx.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.25);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.04);
-			self:blend('add');
-			gFrond[1][1] = self;
-		end"
-	/>
-	<!-- Frond, R (Rxx) -->
-	<Layer
-		File="letmedrv-frond-R-Rxx.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.75);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.04);
-			self:blend('add');
-			gFrond[2][1] = self;
-		end"
-	/>
-	
-	
-	<!-- Frond, L (sharp) -->
-	<Layer
-		File="letmedrv-frond-L.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.25);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.05);
-			self:diffuse(255,255,255,0.7);
-			gFrond[1][2] = self;
-		end"
-	/>
-	<!-- Frond, R (sharp) -->
-	<Layer
-		File="letmedrv-frond-R.png"
-		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH * 0.75);
-			self:y(SCREEN_HEIGHT / 2);
-			self:z(0.05);
-			self:diffuse(255,255,255,0.7);
-			gFrond[2][2] = self;
-		end"
+		SetTimeCommand="%function(self) self:settext(self:GetSecsIntoEffect()); gTime = tonumber(self:GetText()); self:sleep(0.02); self:queuecommand('SetTime'); end"
 	/>
 	
 	
@@ -583,6 +277,7 @@
 			self:stretchto(0, SCREEN_HEIGHT * 0.8, SCREEN_WIDTH, SCREEN_HEIGHT);
 			self:z(1);
 			gEarth = self;
+			Trace('blacksquare '..gGraphicsScale..' ('..self:GetWidth()..', '..self:GetHeight()..')!');
 		end"
 	/>
 	
@@ -619,36 +314,6 @@
 		end"
 	/>
 	<Layer
-		File="letmedrv-road-B.png"
-		OnCommand="%function(self) 
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT);
-			self:z(1.1);
-			table.insert(gPavement, self);
-		end"
-	/>
-	<Layer
-		File="letmedrv-road-A.png"
-		OnCommand="%function(self) 
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT);
-			self:z(1.1);
-			table.insert(gPavement, self);
-		end"
-	/>
-	<Layer
-		File="letmedrv-road-A.png"
-		OnCommand="%function(self) 
-			self:zoom(gGraphicsScale);
-			self:x(SCREEN_WIDTH / 2);
-			self:y(SCREEN_HEIGHT);
-			self:z(1.1);
-			table.insert(gPavement, self);
-		end"
-	/>
-	<Layer
 		File="letmedrv-road-A.png"
 		OnCommand="%function(self) 
 			self:zoom(gGraphicsScale);
@@ -669,6 +334,26 @@
 		end"
 	/>
 	<Layer
+		File="letmedrv-road-C.png"
+		OnCommand="%function(self) 
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH / 2);
+			self:y(SCREEN_HEIGHT);
+			self:z(1.1);
+			table.insert(gPavement, self);
+		end"
+	/>
+	<Layer
+		File="letmedrv-road-A.png"
+		OnCommand="%function(self) 
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH / 2);
+			self:y(SCREEN_HEIGHT);
+			self:z(1.1);
+			table.insert(gPavement, self);
+		end"
+	/>
+	<Layer
 		File="letmedrv-road-A.png"
 		OnCommand="%function(self) 
 			self:zoom(gGraphicsScale);
@@ -700,6 +385,16 @@
 	/>
 	<Layer
 		File="letmedrv-road-B.png"
+		OnCommand="%function(self) 
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH / 2);
+			self:y(SCREEN_HEIGHT);
+			self:z(1.1);
+			table.insert(gPavement, self);
+		end"
+	/>
+	<Layer
+		File="letmedrv-road-C.png"
 		OnCommand="%function(self) 
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH / 2);

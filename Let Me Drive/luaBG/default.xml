@@ -1,0 +1,301 @@
+<ActorFrame><children>
+
+	<!--	I'M THE BACKGROUND	  -->
+	<!--	I'M THE BACKGROUND	  -->
+	<!--	I'M THE BACKGROUND	  -->
+	
+	
+	<!-- Heaven (muted color) -->
+	<Layer
+		File="letmedrv-bg-muted.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_CENTER_X);
+			self:y(SCREEN_CENTER_Y);
+			self:z(0.00);
+			gHeavenMuted = self;
+		end"
+	/>
+	<!-- Heaven (full color) -->
+	<Layer
+		File="letmedrv-bg.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_CENTER_X);
+			self:y(SCREEN_CENTER_Y);
+			self:z(0.01);
+			gHeaven = self;
+			self:diffuse(255,255,255,0);
+			self:decelerate(20);
+			self:diffusealpha(1);
+		end"
+	/>
+	
+	
+	<!-- Sun (glow) -->
+	<Layer
+		File="letmedrv-sun-glow-0.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_CENTER_X);
+			self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
+			self:z(0.021);
+			self:clearzbuffer(1);
+			self:blend('noeffect');
+			self:zwrite(1);
+			table.insert(gSun, self);
+		end"
+	/>
+	<!-- Sun (gradient) -->
+	<Layer
+		File="letmedrv-sun-grad.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_CENTER_X);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.022);
+			self:ztestmode('writeonfail');
+			table.insert(gSunGradient, self);
+			self:diffuse(255,255,255,0.1);
+		end"
+	/>
+	<!-- Sun (glow) -->
+	<Layer
+		File="letmedrv-sun-glow-51.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_CENTER_X);
+			self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
+			self:z(0.023);
+			self:clearzbuffer(1);
+			self:blend('noeffect');
+			self:zwrite(1);
+			table.insert(gSun, self);
+		end"
+	/>
+	<!-- Sun (gradient) -->
+	<Layer
+		File="letmedrv-sun-grad.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_CENTER_X);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.024);
+			self:ztestmode('writeonfail');
+			table.insert(gSunGradient, self);
+			self:diffuse(255,255,255,0.3);
+		end"
+	/>
+	<!-- Sun (glow) -->
+	<Layer
+		File="letmedrv-sun-glow-170.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_CENTER_X);
+			self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
+			self:z(0.025);
+			self:clearzbuffer(1);
+			self:blend('noeffect');
+			self:zwrite(1);
+			table.insert(gSun, self);
+		end"
+	/>
+	<!-- Sun (gradient) -->
+	<Layer
+		File="letmedrv-sun-grad.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_CENTER_X);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.026);
+			self:ztestmode('writeonfail');
+			table.insert(gSunGradient, self);
+			self:diffuse(255,255,255,0.5);
+		end"
+	/>
+	<!-- Sun (sharp) -->
+	<Layer
+		File="letmedrv-sun-white.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_CENTER_X);
+			self:y(SCREEN_HEIGHT + self:GetHeight() / 2);
+			self:z(0.027);
+			self:clearzbuffer(1);
+			self:blend('noeffect');
+			self:zwrite(1);
+			table.insert(gSun, self);
+		end"
+	/>
+	<!-- Sun (gradient) -->
+	<Layer
+		File="letmedrv-sun-grad.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_CENTER_X);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.028);
+			self:ztestmode('writeonfail');
+			table.insert(gSunGradient, self);
+		end"
+	/>
+	
+	
+	<!-- Trunk, L (xGB) -->
+	<Layer
+		File="letmedrv-trunk-L-xGB.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.25);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.03);
+			self:blend('add');
+			gTrunk[1][3] = self;
+		end"
+	/>
+	<!-- Trunk, R (xGB) -->
+	<Layer
+		File="letmedrv-trunk-R-xGB.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.75);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.03);
+			self:blend('add');
+			gTrunk[2][3] = self;
+		end"
+	/>
+	
+	<!-- Trunk, L (Rxx) -->
+	<Layer
+		File="letmedrv-trunk-L-Rxx.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.25);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.04);
+			self:blend('add');
+			gTrunk[1][1] = self;
+		end"
+	/>
+	<!-- Trunk, R (Rxx) -->
+	<Layer
+		File="letmedrv-trunk-R-Rxx.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.75);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.04);
+			self:blend('add');
+			gTrunk[2][1] = self;
+		end"
+	/>
+	
+	
+	<!-- Trunk, L (sharp) -->
+	<Layer
+		File="letmedrv-trunk-L.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.25);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.05);
+			gTrunk[1][2] = self;
+		end"
+	/>
+	<!-- Trunk, R (sharp) -->
+	<Layer
+		File="letmedrv-trunk-R.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.75);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.05);
+			gTrunk[2][2] = self;
+		end"
+	/>
+	
+	
+	<!-- Frond, L (xGB) -->
+	<Layer
+		File="letmedrv-frond-L-xGB.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.25);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.03);
+			self:blend('add');
+			gFrond[1][3] = self;
+		end"
+	/>
+	<!-- Frond, R (xGB) -->
+	<Layer
+		File="letmedrv-frond-R-xGB.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.75);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.03);
+			self:blend('add');
+			gFrond[2][3] = self;
+		end"
+	/>
+	
+	<!-- Frond, L (Rxx) -->
+	<Layer
+		File="letmedrv-frond-L-Rxx.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.25);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.04);
+			self:blend('add');
+			gFrond[1][1] = self;
+		end"
+	/>
+	<!-- Frond, R (Rxx) -->
+	<Layer
+		File="letmedrv-frond-R-Rxx.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.75);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.04);
+			self:blend('add');
+			gFrond[2][1] = self;
+		end"
+	/>
+	
+	
+	<!-- Frond, L (sharp) -->
+	<Layer
+		File="letmedrv-frond-L.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.25);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.05);
+			self:diffuse(255,255,255,0.7);
+			gFrond[1][2] = self;
+		end"
+	/>
+	<!-- Frond, R (sharp) -->
+	<Layer
+		File="letmedrv-frond-R.png"
+		OnCommand="%function(self)
+			self:zoom(gGraphicsScale);
+			self:x(SCREEN_WIDTH * 0.75);
+			self:y(SCREEN_HEIGHT / 2);
+			self:z(0.05);
+			self:diffuse(255,255,255,0.7);
+			gFrond[2][2] = self;
+		end"
+	/>
+	
+	<Layer
+		Type="Quad"
+		InitCommand="%function() Trace('BG Initializing!'); end"
+		OnCommand="sleep,1000"
+	/>
+	
+</children></ActorFrame>
