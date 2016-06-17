@@ -9,6 +9,7 @@
 	<Layer
 		File="letmedrv-bg-muted.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_CENTER_X);
 			self:y(SCREEN_CENTER_Y);
@@ -20,14 +21,12 @@
 	<Layer
 		File="letmedrv-bg.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_CENTER_X);
 			self:y(SCREEN_CENTER_Y);
 			self:z(0.01);
 			gHeaven = self;
-			self:diffuse(255,255,255,0);
-			self:decelerate(20);
-			self:diffusealpha(1);
 		end"
 	/>
 	
@@ -145,6 +144,7 @@
 	<Layer
 		File="letmedrv-trunk-L-xGB.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.25);
 			self:y(SCREEN_HEIGHT / 2);
@@ -157,6 +157,7 @@
 	<Layer
 		File="letmedrv-trunk-R-xGB.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.75);
 			self:y(SCREEN_HEIGHT / 2);
@@ -170,6 +171,7 @@
 	<Layer
 		File="letmedrv-trunk-L-Rxx.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.25);
 			self:y(SCREEN_HEIGHT / 2);
@@ -182,6 +184,7 @@
 	<Layer
 		File="letmedrv-trunk-R-Rxx.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.75);
 			self:y(SCREEN_HEIGHT / 2);
@@ -196,6 +199,7 @@
 	<Layer
 		File="letmedrv-trunk-L.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.25);
 			self:y(SCREEN_HEIGHT / 2);
@@ -207,6 +211,7 @@
 	<Layer
 		File="letmedrv-trunk-R.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.75);
 			self:y(SCREEN_HEIGHT / 2);
@@ -220,6 +225,7 @@
 	<Layer
 		File="letmedrv-frond-L-xGB.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.25);
 			self:y(SCREEN_HEIGHT / 2);
@@ -232,6 +238,7 @@
 	<Layer
 		File="letmedrv-frond-R-xGB.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.75);
 			self:y(SCREEN_HEIGHT / 2);
@@ -245,6 +252,7 @@
 	<Layer
 		File="letmedrv-frond-L-Rxx.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.25);
 			self:y(SCREEN_HEIGHT / 2);
@@ -257,6 +265,7 @@
 	<Layer
 		File="letmedrv-frond-R-Rxx.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.75);
 			self:y(SCREEN_HEIGHT / 2);
@@ -271,11 +280,11 @@
 	<Layer
 		File="letmedrv-frond-L.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.25);
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.05);
-			self:diffuse(255,255,255,0.7);
 			gFrond[1][2] = self;
 		end"
 	/>
@@ -283,11 +292,11 @@
 	<Layer
 		File="letmedrv-frond-R.png"
 		OnCommand="%function(self)
+			self:diffusealpha(0);
 			self:zoom(gGraphicsScale);
 			self:x(SCREEN_WIDTH * 0.75);
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.05);
-			self:diffuse(255,255,255,0.7);
 			gFrond[2][2] = self;
 		end"
 	/>
