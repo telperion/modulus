@@ -301,6 +301,19 @@
 		end"
 	/>
 	
+	
+	<!-- Earth clipper -->
+	<Layer
+		File="blacksquare.png"
+		OnCommand="%function(self)
+			self:stretchto(0, SCREEN_HEIGHT * 0.8, SCREEN_WIDTH, SCREEN_HEIGHT);
+			self:z(0.9);
+			self:clearzbuffer(1);
+			self:blend('noeffect');
+			self:zwrite(1);
+		end"
+	/>	
+	
 	<Layer
 		Type="Quad"
 		InitCommand="%function() Trace('BG Initializing!'); end"

@@ -1,5 +1,29 @@
 <ActorFrame><children>
 
+	<!------------------------------------------------------------------------>
+	<!--
+	
+		Nhato - "Let Me Drive" (3:27)
+		SX 10; S[Cinematic Mode] 0
+		
+		Simfiled and scripted for SMH 2: Stepcharts Made Doubly Horrible!
+		If you found this simfile lonely, look up tourney packs from the
+		SMH/SPERGIN series, as well as its east coast analogue, DOWNS/UPS.
+					
+		The night sky is composed from a photograph found unsourced on
+		Google Images. All other graphic assets are from scratch using
+		Inkscape and GIMP.
+		Animation code follows a structure designed by WinDEU and TaroNuke.
+		
+		For any questions, please contact Telperion (@RI74TA on twitter,
+		Telperion on AIJ/r21freak/Z-I-v/GitHub).
+		
+		Thanks for reading, and hope you enjoy!
+			-- Telperion
+				
+																			-->
+	<!------------------------------------------------------------------------>
+
 	<!--	I'M THE FOREGROUND	  -->
 	<!--	I'M THE FOREGROUND	  -->
 	<!--	I'M THE FOREGROUND	  -->
@@ -47,7 +71,7 @@
 				gTrunk = {{nil, nil, nil}, {nil, nil, nil}};
 				gGraphicsReady = false;
 				gGraphicsScale = 1.0 / math.min(1280 / SCREEN_WIDTH, 960 / SCREEN_HEIGHT);
-				
+								
 				-- Motion master parameters
 				gMoving				= false;
 				gDriving			= 0;
@@ -73,6 +97,16 @@
 					motionResultBounded = (motionResultIntermediate - 1) / (motionResultIntermediate + 1);					
 					return motionResultBounded;
 				end;
+				
+				-- Pavement scaling and placement
+				gPavementScalars = {};
+				for i = 0, 11 do
+					table.insert(gPavementScalars, math.pow(2.0, i/12.0));
+				end				
+				gPavementCenters = {};
+				for i = 0, 12 do
+					table.insert(gPavementCenters, 0);
+				end
 			
 				-- Beat start, Beat end, Mods, Player specific
 				
@@ -87,6 +121,7 @@
 				{336, 340, '*0.3 no dark','end'},
 				{344, 352, '*0.5 dark','end'},
 				{352, 356, '*0.3 no dark','end'},
+				{527, 544, '*0.18 100% stealth','end'},
 				{544, 560, '*1000 dark','end'},
 				}
 				
@@ -107,7 +142,7 @@
 			-- Player mod resets --
 			-----------------------
 			if not gInitMods then
-				GAMESTATE:ApplyGameCommand('mod,clearall')
+				GAMESTATE:ApplyGameCommand('mod,clearall');
 				gInitMods = true;
 			end
 			
@@ -141,16 +176,13 @@
  					if v then
  						SCREENMAN:GetTopScreen():GetChild('ScoreP'..i):hidden(1);
  						SCREENMAN:GetTopScreen():GetChild('LifeP'..i):hidden(1);
---						for k,m in pairs(getmetatable(v)) do
---							Trace('Player has field '..k..'!');
---						end
 						origX = SCREEN_WIDTH * (0.5 * i - 0.25);
 						v:x(SCREEN_CENTER_X);
 						v:addy(SCREEN_HEIGHT / -8.0);
 						v:GetChild('Judgment'):x(origX - SCREEN_CENTER_X);
 						v:GetChild('Combo'):hidden(1);
 						Trace('Player '..i..'\'s location is x='..v:GetX()..', y='..v:GetY()..'!');
-						v:z(1);
+						v:z(1 + math.random() * 0.01);
  					end
  				end
  			end
@@ -187,8 +219,8 @@
 				gMotionEase = 0.0;
 				
 			else	
---				gMoving = false;
---				gMotionEase = 0.0;
+--				gMoving = true;
+--				gMotionEase = 1.0;
 			end
 			
 			
@@ -259,7 +291,7 @@
 						v:decelerate((32 + 0.5 * i) * 60.0 / gBPM);
 						v:y(SCREEN_HEIGHT * 0.9);
 					end
-					gEarthGlow:decelerate((32 + 0.5 * i) * 60.0 / gBPM);
+					gEarthGlow:decelerate(32 * 60.0 / gBPM);
 					gEarthGlow:y(SCREEN_HEIGHT * 0.7);
 				end			
 
@@ -300,7 +332,7 @@
 						v:accelerate((64 + 0.5 * i) * 60.0 / gBPM);
 						v:y(SCREEN_HEIGHT + v:GetHeight() / 2);
 					end
-					gEarthGlow:accelerate((64 + 0.5 * i) * 60.0 / gBPM);
+					gEarthGlow:accelerate(64 * 60.0 / gBPM);
 					gEarthGlow:y(SCREEN_HEIGHT * 0.4);
 				end
 				
@@ -315,7 +347,7 @@
 						v:accelerate((64 + 0.5 * i) * 60.0 / gBPM);
 						v:y(SCREEN_HEIGHT * 0.9);
 					end
-					gEarthGlow:decelerate((32 + 0.5 * i) * 60.0 / gBPM);
+					gEarthGlow:decelerate(32 * 60.0 / gBPM);
 					gEarthGlow:y(SCREEN_HEIGHT * 0.7);
 				end		
 			end
@@ -437,21 +469,37 @@
 			-- Set the road in motion by cycling the paving stones' Y positions and X scales.
 			if gGraphicsReady then
 				gDriving = gDriving + 1;
-				for i,v in pairs(gPavement) do
-					gApparentIndex = (i + gDriving);
-					gApparentIndex = ModulusFunction(gApparentIndex, 12);
-					v:zoomx(gGraphicsScale * (1.0 + gApparentIndex / 12.0));
-					v:y(SCREEN_HEIGHT * 0.8 + SCREEN_HEIGHT / 60.0 * (gApparentIndex + 0.5));
+				
+				if not gMoving then
+					for i,v in pairs(gPavement) do
+						gApparentIndex = (i + gDriving);
+						gApparentIndex = ModulusFunction(gApparentIndex, 12) + 1;
+						zoomFactor = gGraphicsScale * gPavementScalars[gApparentIndex];
+						v:zoomx( zoomFactor );
+						v:y(SCREEN_HEIGHT * 0.8 + SCREEN_HEIGHT / 60.0 * (gApparentIndex - 0.5));
+					end
 				end
 				
 				-- Use the motion master function to shift the X position of all earth objects.
 				if gMoving then
 					gBeatSlow = gBeat;
 					commonSway = MotionMaster(gBeatSlow);
+					
+					-- Pavement movement and skewing.
+					for i = 1, table.getn(gPavementCenters) do
+						gPavementCenters[i] = gMotionEase * MotionMaster(gBeatSlow - (i-1) / 6.0) * SCREEN_WIDTH * 0.3 + SCREEN_CENTER_X
+					end
 					for i,v in pairs(gPavement) do
 						gApparentIndex = (i + gDriving);
-						gApparentIndex = ModulusFunction(gApparentIndex, 12);
-						v:x( gMotionEase * MotionMaster(gBeatSlow - gApparentIndex / 6.0) * SCREEN_WIDTH * 0.3 + SCREEN_CENTER_X );
+						gApparentIndex = ModulusFunction(gApparentIndex, 12) + 1;
+						centerAverage  = (gPavementCenters[gApparentIndex + 1] + gPavementCenters[gApparentIndex]) / 2.0;
+						centerDistance = (gPavementCenters[gApparentIndex + 1] - gPavementCenters[gApparentIndex]);
+						skewFactor = centerDistance / v:GetHeight();
+						zoomFactor = gGraphicsScale * gPavementScalars[gApparentIndex];
+						v:zoomx( zoomFactor );
+						v:skewx( skewFactor / zoomFactor );
+						v:x(  centerAverage );
+						v:y(SCREEN_HEIGHT * 0.8 + SCREEN_HEIGHT / 60.0 * (gApparentIndex - 0.5));
 					end			
 					for i,v in pairs(gPlayers) do
 						if v then
