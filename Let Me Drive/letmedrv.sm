@@ -20,7 +20,7 @@
 #BGCHANGES:0.000=luaBG=1.000=0=0=1=====,
 99999=-nosongbg-=1.000=0=0=0=====,
 ;
-#FGCHANGES:0.000=luaFG=1.000=0=0=1=====,
+#FGCHANGES:
 ;
 #KEYSOUNDS:;
 #ATTACKS:;
