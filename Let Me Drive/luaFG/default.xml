@@ -70,7 +70,7 @@
 				gFrond = {{nil, nil, nil}, {nil, nil, nil}};
 				gTrunk = {{nil, nil, nil}, {nil, nil, nil}};
 				gGraphicsReady = false;
-				gGraphicsScale = 1.0 / math.min(640 / SCREEN_WIDTH, 480 / SCREEN_HEIGHT);
+				gGraphicsScale = 1.0 / math.min(320 / SCREEN_WIDTH, 240 / SCREEN_HEIGHT);
 								
 				-- Motion master parameters
 				gMoving				= false;
