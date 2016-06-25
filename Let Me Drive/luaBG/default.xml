@@ -49,7 +49,7 @@
 	<Layer
 		File="letmedrv-sun-grad.png"
 		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
+			self:zoomto(SCREEN_WIDTH, SCREEN_HEIGHT);
 			self:x(SCREEN_CENTER_X);
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.022);
@@ -76,7 +76,7 @@
 	<Layer
 		File="letmedrv-sun-grad.png"
 		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
+			self:zoomto(SCREEN_WIDTH, SCREEN_HEIGHT);
 			self:x(SCREEN_CENTER_X);
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.024);
@@ -103,7 +103,7 @@
 	<Layer
 		File="letmedrv-sun-grad.png"
 		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
+			self:zoomto(SCREEN_WIDTH, SCREEN_HEIGHT);
 			self:x(SCREEN_CENTER_X);
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.026);
@@ -130,7 +130,7 @@
 	<Layer
 		File="letmedrv-sun-grad.png"
 		OnCommand="%function(self)
-			self:zoom(gGraphicsScale);
+			self:zoomto(SCREEN_WIDTH, SCREEN_HEIGHT);
 			self:x(SCREEN_CENTER_X);
 			self:y(SCREEN_HEIGHT / 2);
 			self:z(0.028);
