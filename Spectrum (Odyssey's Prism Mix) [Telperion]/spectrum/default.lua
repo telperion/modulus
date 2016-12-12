@@ -158,6 +158,7 @@ nGhosts = 1
 --		try slapping it on a distorted ActorMultiVertex instead.
 --		Setting up the vertex coordinates for that takes a little bit of work.
 --
+local PI    = math.pi;
 local LOG2  = math.log(2.0);
 local spectralRows = 36;			-- assuming 16:9
 local spectralCols = 64;			-- assuming 16:9
@@ -202,6 +203,47 @@ local CalculateBaseTextures = function(verts)
 	return verts	
 end
 
+local CalculateShiftingTextures = function(verts, gradient)
+	-- Coordinate the texture all at once.
+	for vertIndex = 1,#verts do
+		local x = verts[vertIndex][1][1] / sw - 0.5
+		local y = verts[vertIndex][1][2] / sh - 0.5
+		
+		-- The gradient function operates on [-1, 1] × [-1, 1].
+		-- The magnitude of the gradient is expected to be scaled to that same space.
+		xn, yn = gradient(2*x, 2*y)
+		
+		-- Apply the gradient onto the vertices after scaling to texture space.
+		verts[vertIndex][3][1] = (verts[vertIndex][1][1] + xn * sw)/tw
+		verts[vertIndex][3][2] = (verts[vertIndex][1][2] + yn * sh)/th
+	end
+
+	return verts	
+end
+
+
+local Gradient_NullShift = function(x, y)
+	return 0, 0
+end
+
+local Gradient_HorizontalSpread = function(x, y)
+	local T = 1.8				-- Side crest distance from center
+	local M = 0.3				-- Scaling factor for X direction
+	local N = 0.8				-- Scaling factor for Y direction
+	local A = 0.01				-- Maximum mplitude of shift
+	
+	local Trad = 2*PI/T
+	local B = 1 + M*x*x + N*y*y
+	local BB = B*B
+		
+	local xn = math.cos(Trad * x) * 2*A*M*x/BB - Trad * math.sin(Trad * x) * A/B
+	local yn = math.cos(Trad * x) * 2*A*N*y/BB
+	
+	return xn, yn
+end
+
+
+
 local spectralAMV = 
 	Def.ActorFrame {
 		Name = "SpectralAMV"
@@ -213,7 +255,9 @@ for rowIndex = 1,spectralRows do
 			Name = "SpectralAMVStrip_"..rowIndex,
 			InitCommand = function(self)
 				local verts = CalculateRowBaseVertices(rowIndex)
-				verts = CalculateBaseTextures(verts)
+				-- verts = CalculateBaseTextures(verts)
+				-- verts = CalculateShiftingTextures(verts, Gradient_NullShift)
+				verts = CalculateShiftingTextures(verts, Gradient_NullShift)
 				self:xy(0, 0)
 					:SetVertices(verts)
 					:SetDrawState{First = 1,
@@ -271,7 +315,6 @@ for ghostIndex = 1,nGhosts do
 				BeginCommand=function(self)
 --					local myColorIndex = tonumber(string.match(self:GetName(), "Sprite_([0-9]+)"))
 					self:Center()
-						:zoom(0.998)
 						:diffuse({1,1,1,0.99})
 						:visible(true)
 				end,
@@ -310,8 +353,8 @@ for ghostIndex = 1,nGhosts do
 				local myIndex = tonumber(string.match(self:GetName(), "Ghost_([0-9]+)"))
 				Trace("myIndex: "..myIndex)
 				self:z(3)
---					:blend("BlendMode_Add")
-					:diffuse({1,1,1,1.0})
+					:blend("BlendMode_Add")
+					:diffuse({1,1,1,0.7})
 					:visible(true)
 			end,			
 		}
