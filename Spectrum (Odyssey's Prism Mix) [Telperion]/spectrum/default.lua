@@ -152,6 +152,78 @@ end
 --
 nGhosts = 1
 
+
+--
+--		Instead of projecting the ghost to a rectangular Sprite, we're gonna
+--		try slapping it on a distorted ActorMultiVertex instead.
+--		Setting up the vertex coordinates for that takes a little bit of work.
+--
+local LOG2  = math.log(2.0);
+local spectralRows = 36;			-- assuming 16:9
+local spectralCols = 64;			-- assuming 16:9
+local spectralDX = sw/spectralCols;
+local spectralDY = sh/spectralRows;
+
+local tw = math.exp(math.ceil(math.log(sw)/LOG2) * LOG2);
+local th = math.exp(math.ceil(math.log(sh)/LOG2) * LOG2);
+
+local CalculateRowBaseVertices = function(rowIndex)
+	verts = {}
+	
+	--
+	-- 1--3--5--7-...
+	-- |  |  |  |
+	-- 2--4--6--8-...
+	--
+	for tateIndex = 0, spectralCols do
+		verts[#verts+1] = {
+			{tateIndex * spectralDX, (rowIndex-1) * spectralDY, 0},
+			Color.White,
+			{0, 0}
+		}
+		verts[#verts+1] = {
+			{tateIndex * spectralDX,  rowIndex    * spectralDY, 0},
+			Color.White,
+			{0, 0}
+		}
+	end
+	
+	return verts
+end
+
+local CalculateBaseTextures = function(verts)
+	-- Coordinate the texture all at once.
+	for vertIndex = 1,#verts do
+		verts[vertIndex][3][1] = verts[vertIndex][1][1] / tw
+		verts[vertIndex][3][2] = verts[vertIndex][1][2] / th
+		Trace(">>> vx = "..verts[vertIndex][1][1]..", vy = "..verts[vertIndex][1][2].." <<<")
+	end
+
+	return verts	
+end
+
+local spectralAMV = 
+	Def.ActorFrame {
+		Name = "SpectralAMV"
+	}
+
+for rowIndex = 1,spectralRows do
+	spectralAMV[#spectralAMV + 1] =
+		Def.ActorMultiVertex {
+			Name = "SpectralAMVStrip_"..rowIndex,
+			InitCommand = function(self)
+				local verts = CalculateRowBaseVertices(rowIndex)
+				verts = CalculateBaseTextures(verts)
+				self:xy(0, 0)
+					:SetVertices(verts)
+					:SetDrawState{First = 1,
+								  Num = spectralCols * 2,
+								  Mode = "DrawMode_QuadStrip"}
+			end,
+		}
+end
+
+
 for ghostIndex = 1,nGhosts do
 	local aftMemoryName = "Memory_"..ghostIndex
 	local aftOutputName = "Output_"..ghostIndex
@@ -168,11 +240,8 @@ for ghostIndex = 1,nGhosts do
 					:EnableAlphaBuffer( true )
 					:Create()
 			end,
-			Def.Sprite{
-				Name = "Sprite",
-				InitCommand = cmd(Center) 
-			}
 		}
+	aftMemory[#aftMemory + 1] = spectralAMV
 
 	local aftOutput = 
 		Def.ActorFrameTexture{
@@ -186,7 +255,13 @@ for ghostIndex = 1,nGhosts do
 					
 				myMemoryName = "Memory"..string.match(self:GetName(), "Output(_[0-9]+)")
 				Trace(myMemoryName)
-				self:GetParent():GetChild(myMemoryName):GetChild("Sprite"):SetTexture( self:GetTexture() )
+				for rowIndex=1,spectralRows do
+					self:GetParent()
+						:GetChild(myMemoryName)
+						:GetChild("SpectralAMV")
+						:GetChild("SpectralAMVStrip_"..rowIndex)
+						:SetTexture( self:GetTexture() )
+				end
 			end,
 			Def.Sprite{	
 				Name = aftOutSprName,
