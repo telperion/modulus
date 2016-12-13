@@ -113,7 +113,7 @@ for pn = 1,2 do
 --			self:aux( tonumber(string.match(self:GetName(), "_([0-9]+)")) )
 		end,
 		OnCommand = function(self)
-			self:z(1)
+			self:z(2)
 		end,
 	}
 end
@@ -190,10 +190,17 @@ local SpectralAdditions =
 		InitCommand = function(self)
 			self:SetTextureName( self:GetName() )
 				:SetWidth(sw)
-				:SetHeight(sw)
+				:SetHeight(sw)	-- uh-huh
 				:EnableAlphaBuffer( true )
 				:Create()
 		end,
+--		BeginCommand = function(self)
+--			local spa = self:GetParent()
+--							:GetChild("Output_1")
+--							:GetChild("SpectralAdditionsSprite")
+--			spa:SetTexture( self:GetTexture() )
+--			Trace("Set texture! woo!")
+--		end,
 	}
 
 
@@ -203,11 +210,10 @@ for i,_ in ipairs(texArrows) do
 		Def.ActorFrame {
 			Name = "WheelOfFate"..i,
 			InitCommand = function(self)
-				self:aux( 1 )
-				self:visible(false)
+				self:aux( 1/math.sqrt(i) )
 			end,
 			OnCommand = function(self)
-				self:xy(0, 0)
+				self:xy(sw/2, sh/2)
 					:queuecommand("Rotater")
 			end,
 			RotaterCommand = function(self)
@@ -218,8 +224,8 @@ for i,_ in ipairs(texArrows) do
 			end,
 		}
 	
-	local spokesCount = 3 + 2 * i
-	local bestRadius = 64 * 2.5 * (spokesCount - 3) / (2*PI)
+	local spokesCount = 1 + 4 * i
+	local bestRadius = 64 * 1.5 * (spokesCount - 3) / (2*PI)
 	for j = 1,spokesCount do
 		WheelOfFate[#WheelOfFate + 1] = 
 			Def.ActorProxy {
@@ -230,25 +236,32 @@ for i,_ in ipairs(texArrows) do
 				BeginCommand=function(self)
 					local McCoy = self:GetParent()
 									  :GetParent()
+									  :GetParent()
 									  :GetChild("SpectrumNote"..self:getaux())
 					if McCoy then 
 						self:SetTarget(McCoy)
 							:zoom(1 - self:getaux()*0.05)
-							:visible(true)
+							:visible(true)						
 					else 
 						self:hibernate(1573)
+						Trace("You unhooked the tap note parents again, god damn it!!")
 					end
 				end,
 				OnCommand=function(self)
 					local myIndex = tonumber(string.match(self:GetName(), "[0-9]+"))
 					self:xy(bestRadius * math.cos(2*PI * j/spokesCount), bestRadius * math.sin(2*PI * j/spokesCount))
-						:rotationz(360 * j/spokesCount + 90)
+						:rotationz(360 * j/spokesCount - 90)
+						:wag()
+						:effectclock('beat')
+						:effectmagnitude(0, 0, 30)
 				end,
 			}
 	end
 		
-	Spectrum[#Spectrum + 1] = WheelOfFate
+	SpectralAdditions[#SpectralAdditions + 1] = WheelOfFate
 end
+
+Spectrum[#Spectrum + 1] = SpectralAdditions
 	
 --
 -- 		Extra nuts 'n' bolts
@@ -411,6 +424,23 @@ local Gradient_Drip = function(x, y, z)
 end
 
 
+local Gradient_Whirlpool = function(x, y, z)
+	local T = 7					-- Periods in one revolution
+	local M = 0.3 + 0.1 * z		-- Scaling factor for wave distortion
+	local N = 0.3 + 0.1 * z		-- Scaling factor on distance to amplitude
+	local A = 0.002				-- Maximum amplitude of shift
+	
+	local Trad = 2*PI/T
+	local Bmag = math.sqrt(x*x + y*y)
+	local Barg = math.atan(y, x)
+		
+	local xn = -y * A*(N + 1 / Bmag)
+	local yn =  x * A*(N + 1 / Bmag)
+	
+	return xn, yn
+end
+
+
 for ghostIndex = 1,nGhosts do
 	local aftMemoryName = "Memory_"..ghostIndex
 	local aftOutputName = "Output_"..ghostIndex
@@ -512,33 +542,25 @@ for ghostIndex = 1,nGhosts do
 				end
 			}
 	end
-	for quant = 1,#texArrows do
+	
+	for i=1,2 do
 		aftOutput[#aftOutput + 1] = 
-			Def.ActorProxy {					
-				Name = "ProxyWheelOfFate"..quant,
+			Def.Sprite {					
+				Name = "SpectralAdditionsSprite"..i,
+				InitCommand=function(self)
+					self:aux( tonumber(string.match(self:GetName(), "[0-9]+")) )
+				end,
 				BeginCommand=function(self)
-					local myIndex = string.match(self:GetName(), "ProxyWheelOfFate([0-9])")
-					local wof = self:GetParent()
+					local spa = self:GetParent()
 									:GetParent()
-									:GetChild("WheelOfFate"..myIndex)
-					self:SetTarget(wof)
+									:GetChild("SpectralAdditions")
+					self:SetTexture( spa:GetTexture() )
+					Trace("Set texture! woo!")
 				end,
 				OnCommand=function(self)
-					self:xy(0, sh/2)
-				end
-			}
-		aftOutput[#aftOutput + 1] = 
-			Def.ActorProxy {					
-				Name = "ProxyWheelOfFate"..quant,
-				BeginCommand=function(self)
-					local myIndex = string.match(self:GetName(), "ProxyWheelOfFate([0-9])")
-					local wof = self:GetParent()
-									:GetParent()
-									:GetChild("WheelOfFate"..myIndex)
-					self:SetTarget(wof)
-				end,
-				OnCommand=function(self)
-					self:xy(sw, sh/2)
+					self:xy(sw/2 + sw/2 * SideSign(self:getaux()), sw/2)
+						:blend("BlendMode_WeightedMulitply")
+						:diffusealpha(0.7)
 				end
 			}
 	end
@@ -647,7 +669,7 @@ Spectrum[#Spectrum + 1]= Def.Quad {
 Spectrum[#Spectrum + 1] = LoadActor("./hudreducer.lua")
 
 -- Load the mods table parser into this script.
-niceSpeed = 420 / 155			-- This song is 155 BPM.
+niceSpeed = (420 + 69) / 155			-- This song is 155 BPM.
 modsTable = {
 	-- [1]: beat start
 	-- [2]: mod type
