@@ -440,6 +440,35 @@ local Gradient_Whirlpool = function(x, y, z)
 	return xn, yn
 end
 
+local Gradient_Gack = function(x, y, z)
+	local T = 7					-- Periods in one revolution
+	local phi = PI/2			-- Phase shift of gacks
+	local M = 1.0				-- Scaling factor on distance to amplitude
+	local N = 0.5 + 0.1*z		-- Scaling factor for wave distortion
+	local A = 0.002				-- Maximum amplitude of shift
+	
+	
+--	y = y + 1					-- Shift y.
+	local Trad = T
+	local Bmag = math.sqrt(x*x + y*y)
+--	local Barg = (math.acos(x/(Bmag+0.000001)) + math.asin(y/(Bmag+0.000001))) / 2
+	local Barg = math.acos(x/(Bmag+0.000001)) * (y >= 0 and 1 or -1)
+	local Bsin = math.sin(Trad * Barg - phi)
+	local Bsin2 = math.sin(2 * (Trad * Barg - phi))
+	local BigDenom = 1 + Bmag*Bmag*(M + N*Bsin*Bsin)
+	local BigDenomSq = BigDenom * BigDenom
+	
+	local thn = -2*A*Bmag*(M + N*Bsin*Bsin) / BigDenomSq
+	local rn = Trad*A*N*Bmag*Bsin2 / ((Bmag+0.000001)*BigDenomSq)
+		
+	local xn = rn * math.cos(Barg) - thn * math.sin(Barg)
+	local yn = rn * math.sin(Barg) + thn * math.cos(Barg)
+	
+--	Trace ('atan(1,0)='..math.atan(1, 0)..', atan(-1,0)='..math.atan(-1, 0)..', atan(0,1)='..math.atan(0, 1)..', atan(0,-1)='..math.atan(0, -1))
+	Trace ('>>>A x = '..x..', y = '..y..': xn = '..xn..', yn = '..yn..'\t\t\tBarg = '..Barg)
+	return xn, yn
+end
+
 
 for ghostIndex = 1,nGhosts do
 	local aftMemoryName = "Memory_"..ghostIndex
@@ -462,7 +491,7 @@ for ghostIndex = 1,nGhosts do
 					local verts = CalculateRowBaseVertices(rowIndex)
 					-- verts = CalculateBaseTextures(verts)
 					-- verts = CalculateShiftingTextures(verts, Gradient_NullShift)
-					verts = CalculateShiftingTextures(verts, Gradient_Drip, (ghostIndex-2)*0.5)
+					verts = CalculateShiftingTextures(verts, Gradient_Gack, (ghostIndex-2)*0.5)
 					self:xy(0, 0)
 						:SetVertices(verts)
 						:SetDrawState{First = 1,
