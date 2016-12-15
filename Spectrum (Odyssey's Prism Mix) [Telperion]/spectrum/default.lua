@@ -227,7 +227,7 @@ for i,_ in ipairs(texArrows) do
 		}
 	
 	local spokesCount = 2 + 4 * i
-	local bestRadius = 64 * 1.5 * (spokesCount - 3) / (2*PI)
+	local bestRadius = 64 * 1.5 * (spokesCount - 3) / (2*PI) * (sw/sh * 9/16)
 	for j = 1,spokesCount do
 		WheelOfFate[#WheelOfFate + 1] = 
 			Def.ActorProxy {
@@ -362,7 +362,7 @@ end
 
 
 local Gradient_Expand = function(x, y, z)
-	return x * (-0.01 - 0.01*z), (y+0.8) * (-0.01 - 0.01*z)
+	return x * (-0.02 - 0.02*z), (y+0.8) * (-0.02 - 0.02*z)
 end
 
 local Gradient_HorizontalSpread = function(x, y, z)
@@ -425,6 +425,20 @@ local Gradient_Drip = function(x, y, z)
 	local Trad = 2*PI/T
 		
 	local xn = math.sin(Trad * y) * A*M*Trad
+	local yn = -A*N*(y+1)
+	
+	return xn, yn
+end
+
+local Gradient_DripRev = function(x, y, z)
+	local T = 0.4				-- Period of drip wave
+	local M = 0.3 + 0.1 * z	-- Scaling factor for X direction
+	local N = 1.0 + z			-- Scaling factor for Y direction
+	local A = 0.002				-- Maximum amplitude of shift
+	
+	local Trad = 2*PI/T
+		
+	local xn = -math.sin(Trad * y) * A*M*Trad
 	local yn = -A*N*(y+1)
 	
 	return xn, yn
@@ -632,6 +646,41 @@ for ghostIndex = 1,nGhosts do
 				end,
 			}
 	end
+	
+	aftOutput[#aftOutput + 1] = 
+		Def.Sprite {					
+			Name = "BG",
+			Texture = "./spectrum-bq.png",
+			InitCommand=function(self)
+			end,
+			OnCommand=function(self)			
+				self:SetWidth(sw)
+					:SetHeight(sw * 9/16)
+					:xy(sw/2, sh - sw*9/32)
+					:diffusealpha(0.6)
+					:z(-1)
+			end,
+			HideBGMessageCommand=function(self, args)
+				if args[1] then
+					self:finishtweening()
+						:decelerate(args[1] / BPS)
+						:diffusealpha(0.0)
+				else
+					self:finishtweening()
+						:diffusealpha(0.0)
+				end
+			end,
+			ShowBGMessageCommand=function(self, args)
+				if args[1] then
+					self:finishtweening()
+						:decelerate(args[1] / BPS)
+						:diffusealpha(0.6)
+				else
+					self:finishtweening()
+						:diffusealpha(0.6)
+				end
+			end,
+		}
 		
 	local ghostBoy = 
 		Def.Sprite{
@@ -680,53 +729,54 @@ local messageList = {
 	-- [3]: optional table of arguments passed to message
 	
 	{  0.00, "CenterProxies"},	
-	{  0.00, "GhostDiffuse", {0.0}},
+	{  0.00, "GhostDiffuse", {0.1}},
 	{  0.00, "GhostProxiesOff"},	
-	{  4.00, "GradientChange", {Gradient_HorizontalSpread}},	
-	{  4.00, "StartTrail"},
+	{  8.00, "GradientChange", {Gradient_HorizontalSpread}},	
+	{  8.00, "StartTrail"},
 	
+	{240.00, "HideBG", {16}},
 	{240.00, "GhostDiffuse", {0.3, 64}},
 	{242.00, "GhostProxiesOn"},
-	{242.25, "GhostProxiesOff"},
+	{242.08, "GhostProxiesOff"},
 	{246.00, "GhostProxiesOn"},
-	{246.25, "GhostProxiesOff"},
+	{246.08, "GhostProxiesOff"},
 	{250.00, "GhostProxiesOn"},
-	{250.25, "GhostProxiesOff"},
+	{250.08, "GhostProxiesOff"},
 	{254.00, "GhostProxiesOn"},
-	{254.25, "GhostProxiesOff"},
+	{254.08, "GhostProxiesOff"},
 	{258.00, "GhostProxiesOn"},
-	{258.25, "GhostProxiesOff"},
+	{258.08, "GhostProxiesOff"},
 	{262.00, "GhostProxiesOn"},
-	{262.25, "GhostProxiesOff"},
+	{262.08, "GhostProxiesOff"},
 	{266.00, "GhostProxiesOn"},
-	{266.25, "GhostProxiesOff"},
+	{266.08, "GhostProxiesOff"},
 	{270.00, "GhostProxiesOn"},
-	{270.25, "GhostProxiesOff"},
+	{270.08, "GhostProxiesOff"},
 	{274.00, "GhostProxiesOn"},
-	{274.25, "GhostProxiesOff"},
+	{274.08, "GhostProxiesOff"},
 	{278.00, "GhostProxiesOn"},
-	{278.25, "GhostProxiesOff"},
+	{278.08, "GhostProxiesOff"},
 	{282.00, "GhostProxiesOn"},
-	{282.25, "GhostProxiesOff"},
+	{282.08, "GhostProxiesOff"},
 	{286.00, "GhostProxiesOn"},
-	{286.25, "GhostProxiesOff"},
+	{286.08, "GhostProxiesOff"},
 	{290.00, "GhostProxiesOn"},
-	{290.25, "GhostProxiesOff"},
+	{290.08, "GhostProxiesOff"},
 	{294.00, "GhostProxiesOn"},
-	{294.25, "GhostProxiesOff"},
+	{294.08, "GhostProxiesOff"},
 	{298.00, "GhostProxiesOn"},
-	{298.25, "GhostProxiesOff"},
+	{298.08, "GhostProxiesOff"},
 	{303.00, "GhostProxiesOn"},
 	
 	{311.00, "GhostProxiesOff"},
 	{312.00, "GhostProxiesOn"},
 	{312.00, "GradientChange", {Gradient_Drip}},
 	{312.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
-	{314.00, "GradientChange", {Gradient_Drip}},
+	{314.00, "GradientChange", {Gradient_DripRev}},
 	{314.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
 	{327.00, "GhostProxiesOff"},
 	{328.00, "GhostProxiesOn"},
-	{328.00, "GradientChange", {Gradient_Drip}},
+	{328.00, "GradientChange", {Gradient_DripRev}},
 	{328.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
 	{330.00, "GradientChange", {Gradient_Drip}},
 	{330.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
@@ -738,14 +788,14 @@ local messageList = {
 	{352.00, "GhostProxiesOn"},
 	{352.00, "GradientChange", {Gradient_Drip}},
 	{353.00, "GradientChange", {Gradient_Expand, 1}},
-	{354.00, "GradientChange", {Gradient_Drip}},
+	{354.00, "GradientChange", {Gradient_DripRev}},
 	{355.00, "GradientChange", {Gradient_Expand, 1}},
 	{356.00, "GradientChange", {Gradient_Drip}},
 	{356.75, "GradientChange", {Gradient_Expand, 3.25}},
-	{363.50, "GradientChange", {Gradient_Drip}},
+	{363.50, "GradientChange", {Gradient_DripRev}},
 		
 	{368.00, "GhostProxiesOff"},
-	{368.00, "GhostDiffuse", {0.5, 7}},
+	{368.00, "GhostDiffuse", {0.4, 7}},
 	{368.00, "GradientChange", {Gradient_Gack, 7}},	
 	{375.00, "FateHello"},	
 	{376.00, "GhostProxiesOn"},
@@ -755,8 +805,10 @@ local messageList = {
 	{496.00, "GhostProxiesOff"},	
 	{524.00, "StopTrail"},	
 	{526.00, "StartTrail"},	
-	{528.00, "GhostDiffuse", {0.6}},
+	{528.00, "GhostDiffuse", {0.5}},
 	{528.00, "GhostProxiesOn"},
+	{528.00, "ShowBG", {4}},
+	{536.00, "GhostDiffuse", {0.0, 4}},
 }
 
 Spectrum[#Spectrum + 1]= Def.Quad {
