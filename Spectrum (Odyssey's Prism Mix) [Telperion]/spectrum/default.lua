@@ -128,10 +128,11 @@ for pn = 1,2 do
 			self:aux( tonumber(string.match(self:GetName(), "[0-9]")) )
 		end,
 		BeginCommand = function(self)
-			local McCoy = SCREENMAN:GetTopScreen():GetChild('PlayerP'..self:getaux()):GetChild('Judgment')
+			local McCoy = SCREENMAN:GetTopScreen():GetChild('PlayerP'..self:getaux())
 			if McCoy then 
-				self:SetTarget(McCoy)
-				McCoy:visible(false)
+				local McJudge = McCoy:GetChild('Judgment')
+				self:SetTarget(McJudge)
+				McJudge:visible(false)
 			else 
 				self:hibernate(1573)
 			end
@@ -360,6 +361,9 @@ local CalculateShiftingTextures = function(verts, gradient, soul)
 end
 
 
+local Gradient_Expand = function(x, y, z)
+	return x * (-0.01 - 0.01*z), (y+0.8) * (-0.01 - 0.01*z)
+end
 
 local Gradient_HorizontalSpread = function(x, y, z)
 	local T = 1.8				-- Side crest distance from center
@@ -414,7 +418,7 @@ end
 
 local Gradient_Drip = function(x, y, z)
 	local T = 0.4				-- Period of drip wave
-	local M = 0.3 + 0.1 * z		-- Scaling factor for X direction
+	local M = 0.3 + 0.1 * z	-- Scaling factor for X direction
 	local N = 1.0 + z			-- Scaling factor for Y direction
 	local A = 0.002				-- Maximum amplitude of shift
 	
@@ -451,10 +455,9 @@ local Gradient_Gack = function(x, y, z)
 	local A = 0.005				-- Maximum amplitude of shift
 	
 	
-	y = y + z*4/3					-- Shift y.
+	y = y + z*4/3				-- Shift y.
 	local Trad = T
 	local Bmag = math.sqrt(x*x + y*y)
---	local Barg = (math.acos(x/(Bmag+0.000001)) + math.asin(y/(Bmag+0.000001))) / 2
 	local Barg = math.acos(x/(Bmag+0.000001)) * (y >= 0 and 1 or -1)
 	local Bsin = math.sin(Trad * Barg - phi)
 	local Bsin2 = math.sin(2 * (Trad * Barg - phi))
@@ -470,6 +473,11 @@ local Gradient_Gack = function(x, y, z)
 	return xn, yn
 end
 
+
+local nullVerts = {}
+local horzVerts = {}
+local dripVerts = {}
+local gackVerts = {}
 
 for ghostIndex = 1,nGhosts do
 	local aftMemoryName = "Memory_"..ghostIndex
@@ -487,17 +495,33 @@ for ghostIndex = 1,nGhosts do
 	for rowIndex = 1,spectralRows do
 		spectralAMV[#spectralAMV + 1] =
 			Def.ActorMultiVertex {
-				Name = "SpectralAMVStrip_"..rowIndex,
+				Name = "SpectralAMVStrip_"..ghostIndex.."_"..rowIndex,
 				InitCommand = function(self)
 					local verts = CalculateRowBaseVertices(rowIndex)
 					-- verts = CalculateBaseTextures(verts)
 					-- verts = CalculateShiftingTextures(verts, Gradient_NullShift)
-					verts = CalculateShiftingTextures(verts, Gradient_Drip, (ghostIndex-2)*0.5)
+					verts = CalculateShiftingTextures(verts, Gradient_Gack, (ghostIndex-2)*0.5)
 					self:xy(0, 0)
 						:SetVertices(verts)
 						:SetDrawState{First = 1,
 									  Num = (spectralCols + 1) * 2,
 									  Mode = "DrawMode_QuadStrip"}
+				end,
+				GradientChangeMessageCommand = function(self, args)
+					ghostIndex, rowIndex = string.match(self:GetName(), "_([0-9]+)_([0-9]+)")
+					local verts = CalculateRowBaseVertices(rowIndex)
+					if args[1] then
+						verts = CalculateShiftingTextures(verts, args[1], (ghostIndex-2)*0.5)
+					end
+					
+					if args[2] then
+						self:finishtweening()
+							:decelerate(args[2] / BPS)
+							:SetVertices(verts)
+					else		
+						self:finishtweening()
+							:SetVertices(verts)
+					end
 				end,
 			}
 	end
@@ -531,7 +555,7 @@ for ghostIndex = 1,nGhosts do
 					self:GetParent()
 						:GetChild(myMemoryName)
 						:GetChild("SpectralAMV")
-						:GetChild("SpectralAMVStrip_"..rowIndex)
+						:GetChild("SpectralAMVStrip_"..ghostIndex.."_"..rowIndex)
 						:SetTexture( self:GetTexture() )
 				end
 			end,
@@ -544,7 +568,7 @@ for ghostIndex = 1,nGhosts do
 				BeginCommand=function(self)
 					self:Center()
 						:diffuse(colorGhosts[self:getaux()])
-						:diffusealpha(0.998)
+						:diffusealpha(0.0)
 						:visible(true)
 				end,
 				StopTrailMessageCommand=function(self)
@@ -569,7 +593,13 @@ for ghostIndex = 1,nGhosts do
 				end,
 				OnCommand=function(self)
 					self:xy(0, 0)
-				end
+				end,
+				GhostProxiesOffMessageCommand=function(self)
+					self:visible(false)
+				end,
+				GhostProxiesOnMessageCommand=function(self)
+					self:visible(true)
+				end,
 			}
 	end
 	
@@ -588,10 +618,18 @@ for ghostIndex = 1,nGhosts do
 					Trace("Set texture! woo!")
 				end,
 				OnCommand=function(self)
-					self:xy(sw/2 + sw/2 * SideSign(self:getaux()), sh/2)
+					self:xy(sw/2 + sw * SideSign(self:getaux()), sh/2)
 --						:blend("BlendMode_WeightedMultiply")
 						:diffusealpha(0.7)
-				end
+				end,
+				FateHelloMessageCommand=function(self)
+					self:decelerate(1.0 / BPS)
+						:xy(sw/2 + sw/2 * SideSign(self:getaux()), sh/2)
+				end,
+				FateGoodbyeMessageCommand=function(self)
+					self:decelerate(32.0 / BPS)
+						:xy(sw/2 + sw * SideSign(self:getaux()), sh/2)
+				end,
 			}
 	end
 		
@@ -605,9 +643,19 @@ for ghostIndex = 1,nGhosts do
 				Trace("myIndex: "..myIndex)
 				self:z(0.5)
 					:blend("BlendMode_Add")
-					:diffuse({1,1,1,0.5})
+					:diffuse({1,1,1,0.4})
 					:visible(true)
-			end,			
+			end,
+			GhostDiffuseMessageCommand=function(self, args)
+				if args[2] then
+					self:finishtweening()
+						:decelerate(args[2] / BPS)
+						:diffusealpha(args[1])
+				else
+					self:finishtweening()
+						:diffusealpha(args[1])
+				end
+			end
 		}
 		
 	Spectrum[#Spectrum + 1] = aftMemory
@@ -632,6 +680,83 @@ local messageList = {
 	-- [3]: optional table of arguments passed to message
 	
 	{  0.00, "CenterProxies"},	
+	{  0.00, "GhostDiffuse", {0.0}},
+	{  0.00, "GhostProxiesOff"},	
+	{  4.00, "GradientChange", {Gradient_HorizontalSpread}},	
+	{  4.00, "StartTrail"},
+	
+	{240.00, "GhostDiffuse", {0.3, 64}},
+	{242.00, "GhostProxiesOn"},
+	{242.25, "GhostProxiesOff"},
+	{246.00, "GhostProxiesOn"},
+	{246.25, "GhostProxiesOff"},
+	{250.00, "GhostProxiesOn"},
+	{250.25, "GhostProxiesOff"},
+	{254.00, "GhostProxiesOn"},
+	{254.25, "GhostProxiesOff"},
+	{258.00, "GhostProxiesOn"},
+	{258.25, "GhostProxiesOff"},
+	{262.00, "GhostProxiesOn"},
+	{262.25, "GhostProxiesOff"},
+	{266.00, "GhostProxiesOn"},
+	{266.25, "GhostProxiesOff"},
+	{270.00, "GhostProxiesOn"},
+	{270.25, "GhostProxiesOff"},
+	{274.00, "GhostProxiesOn"},
+	{274.25, "GhostProxiesOff"},
+	{278.00, "GhostProxiesOn"},
+	{278.25, "GhostProxiesOff"},
+	{282.00, "GhostProxiesOn"},
+	{282.25, "GhostProxiesOff"},
+	{286.00, "GhostProxiesOn"},
+	{286.25, "GhostProxiesOff"},
+	{290.00, "GhostProxiesOn"},
+	{290.25, "GhostProxiesOff"},
+	{294.00, "GhostProxiesOn"},
+	{294.25, "GhostProxiesOff"},
+	{298.00, "GhostProxiesOn"},
+	{298.25, "GhostProxiesOff"},
+	{303.00, "GhostProxiesOn"},
+	
+	{311.00, "GhostProxiesOff"},
+	{312.00, "GhostProxiesOn"},
+	{312.00, "GradientChange", {Gradient_Drip}},
+	{312.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
+	{314.00, "GradientChange", {Gradient_Drip}},
+	{314.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
+	{327.00, "GhostProxiesOff"},
+	{328.00, "GhostProxiesOn"},
+	{328.00, "GradientChange", {Gradient_Drip}},
+	{328.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
+	{330.00, "GradientChange", {Gradient_Drip}},
+	{330.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
+	{332.00, "GradientChange", {Gradient_Expand, 4}},
+	{343.00, "GhostProxiesOff"},
+	{344.00, "GhostProxiesOn"},
+	{351.00, "GhostProxiesOff"},
+	{351.00, "GradientChange", {Gradient_Expand, 1}},
+	{352.00, "GhostProxiesOn"},
+	{352.00, "GradientChange", {Gradient_Drip}},
+	{353.00, "GradientChange", {Gradient_Expand, 1}},
+	{354.00, "GradientChange", {Gradient_Drip}},
+	{355.00, "GradientChange", {Gradient_Expand, 1}},
+	{356.00, "GradientChange", {Gradient_Drip}},
+	{356.75, "GradientChange", {Gradient_Expand, 3.25}},
+	{363.50, "GradientChange", {Gradient_Drip}},
+		
+	{368.00, "GhostProxiesOff"},
+	{368.00, "GhostDiffuse", {0.5, 7}},
+	{368.00, "GradientChange", {Gradient_Gack, 7}},	
+	{375.00, "FateHello"},	
+	{376.00, "GhostProxiesOn"},
+	
+	{496.00, "FateGoodbye"},	
+	{496.00, "GhostDiffuse", {0.0, 32}},	
+	{496.00, "GhostProxiesOff"},	
+	{524.00, "StopTrail"},	
+	{526.00, "StartTrail"},	
+	{528.00, "GhostDiffuse", {0.6}},
+	{528.00, "GhostProxiesOn"},
 }
 
 Spectrum[#Spectrum + 1]= Def.Quad {
@@ -654,9 +779,11 @@ Spectrum[#Spectrum + 1]= Def.Quad {
 		-- Hide players and use proxies instead.
 		-- (The FG command system has largely been replaced with the FG messaging system.)
 		if overtime >=   0.0 and fgcmd ==  0 then
-			for i,v in ipairs(plr) do
+			for pn = 1,2 do
+				local v = SCREENMAN:GetTopScreen():GetChild('PlayerP'..pn)
 				if v then
 					v:visible(false);
+					Trace('Hid real player '..pn)
 				end
 			end
 			
