@@ -614,6 +614,11 @@ for ghostIndex = 1,nGhosts do
 				GhostProxiesOnMessageCommand=function(self)
 					self:visible(true)
 				end,
+				GhostProxiesPulseMessageCommand=function(self)
+					self:visible(true)
+					self:GetParent():Draw()
+					self:visible(false)
+				end,
 			}
 	end
 	
@@ -736,36 +741,21 @@ local messageList = {
 	
 	{240.00, "HideBG", {16}},
 	{240.00, "GhostDiffuse", {0.3, 64}},
-	{242.00, "GhostProxiesOn"},
-	{242.08, "GhostProxiesOff"},
-	{246.00, "GhostProxiesOn"},
-	{246.08, "GhostProxiesOff"},
-	{250.00, "GhostProxiesOn"},
-	{250.08, "GhostProxiesOff"},
-	{254.00, "GhostProxiesOn"},
-	{254.08, "GhostProxiesOff"},
-	{258.00, "GhostProxiesOn"},
-	{258.08, "GhostProxiesOff"},
-	{262.00, "GhostProxiesOn"},
-	{262.08, "GhostProxiesOff"},
-	{266.00, "GhostProxiesOn"},
-	{266.08, "GhostProxiesOff"},
-	{270.00, "GhostProxiesOn"},
-	{270.08, "GhostProxiesOff"},
-	{274.00, "GhostProxiesOn"},
-	{274.08, "GhostProxiesOff"},
-	{278.00, "GhostProxiesOn"},
-	{278.08, "GhostProxiesOff"},
-	{282.00, "GhostProxiesOn"},
-	{282.08, "GhostProxiesOff"},
-	{286.00, "GhostProxiesOn"},
-	{286.08, "GhostProxiesOff"},
-	{290.00, "GhostProxiesOn"},
-	{290.08, "GhostProxiesOff"},
-	{294.00, "GhostProxiesOn"},
-	{294.08, "GhostProxiesOff"},
-	{298.00, "GhostProxiesOn"},
-	{298.08, "GhostProxiesOff"},
+	{242.00, "GhostProxiesPulse"},
+	{246.00, "GhostProxiesPulse"},
+	{250.00, "GhostProxiesPulse"},
+	{254.00, "GhostProxiesPulse"},
+	{258.00, "GhostProxiesPulse"},
+	{262.00, "GhostProxiesPulse"},
+	{266.00, "GhostProxiesPulse"},
+	{270.00, "GhostProxiesPulse"},
+	{274.00, "GhostProxiesPulse"},
+	{278.00, "GhostProxiesPulse"},
+	{282.00, "GhostProxiesPulse"},
+	{286.00, "GhostProxiesPulse"},
+	{290.00, "GhostProxiesPulse"},
+	{294.00, "GhostProxiesPulse"},
+	{298.00, "GhostProxiesPulse"},
 	{303.00, "GhostProxiesOn"},
 	
 	{311.00, "GhostProxiesOff"},
