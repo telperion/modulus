@@ -42,13 +42,20 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 			hamburger:GetChild("Underlay"):decelerate(1.0 / GAMESTATE:GetSongBPS()):diffusealpha(0.0);
 		end
 				
-		-- Try to set the noteskin to "cyber" for each player.
+		-- Try to set the noteskin to "cyber" for each player.		
 		local hadToSetNoteskin = false;
+		local hadToEraseTurnMods = false;
 		for pn,_ in ipairs(playerExpected) do		
-			pops = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn):GetPlayerOptions("ModsLevel_Song");
+			pops = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn):GetPlayerOptions("ModsLevel_Preferred");
 			if pops then 
 				-- Changing the fail setting works well here.
-				pops:FailSetting('FailType_Off');
+				-- pops:FailSetting('FailType_Off');
+				prevTN1, didItWork = pops:Mirror(false);
+				prevTN2, didItWork = pops:Left(false);
+				prevTN3, didItWork = pops:Right(false);
+				prevTN4, didItWork = pops:Shuffle(false);
+				prevTN5, didItWork = pops:SoftShuffle(false);
+				prevTN6, didItWork = pops:SuperShuffle(false);
 		
 				prevNS1, didItWork = pops:NoteSkin("Cyber");
 				prevNS2, didItWork = pops:NoteSkin("cyber");
@@ -62,6 +69,11 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 					-- But the song needs to be restarted or it won't take.
 					hadToSetNoteskin = true;
 				end
+				
+				if prevTN1 or prevTN2 or prevTN3 or prevTN4 or prevTN5 or prevTN6 then
+					-- No turn mods! C'mon!!
+					hadToEraseTurnMods = true;
+				end					
 			end
 			
 			-- Force the combo to disappear.
@@ -82,7 +94,7 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 			end
 		end
 				
-		if hadToSetNoteskin then
+		if hadToSetNoteskin or hadToEraseTurnMods then
 			-- We changed the noteskin! 
 			-- But the song needs to be restarted or it won't take.
 			SCREENMAN:SetNewScreen("ScreenGameplay"):StartTransitioningScreen("SM_GoToNextScreen");

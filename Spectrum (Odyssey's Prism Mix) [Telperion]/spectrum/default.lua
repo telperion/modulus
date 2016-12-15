@@ -190,7 +190,7 @@ local SpectralAdditions =
 		InitCommand = function(self)
 			self:SetTextureName( self:GetName() )
 				:SetWidth(sw)
-				:SetHeight(sw)	-- uh-huh
+				:SetHeight(sh)
 				:EnableAlphaBuffer( true )
 				:Create()
 		end,
@@ -211,6 +211,7 @@ for i,_ in ipairs(texArrows) do
 			Name = "WheelOfFate"..i,
 			InitCommand = function(self)
 				self:aux( 1/math.sqrt(i) )
+					:fov(90)
 			end,
 			OnCommand = function(self)
 				self:xy(sw/2, sh/2)
@@ -224,7 +225,7 @@ for i,_ in ipairs(texArrows) do
 			end,
 		}
 	
-	local spokesCount = 1 + 4 * i
+	local spokesCount = 2 + 4 * i
 	local bestRadius = 64 * 1.5 * (spokesCount - 3) / (2*PI)
 	for j = 1,spokesCount do
 		WheelOfFate[#WheelOfFate + 1] = 
@@ -251,9 +252,11 @@ for i,_ in ipairs(texArrows) do
 					local myIndex = tonumber(string.match(self:GetName(), "[0-9]+"))
 					self:xy(bestRadius * math.cos(2*PI * j/spokesCount), bestRadius * math.sin(2*PI * j/spokesCount))
 						:rotationz(360 * j/spokesCount - 90)
-						:wag()
+						:bob()
 						:effectclock('beat')
 						:effectmagnitude(0, 0, 30)
+						:effectperiod(2)
+						:effectoffset(j)
 				end,
 			}
 	end
@@ -287,8 +290,8 @@ colorGhosts = {
 --		try slapping it on a distorted ActorMultiVertex instead.
 --		Setting up the vertex coordinates for that takes a little bit of work.
 --
-local spectralRows = 36				-- assuming 16:9
-local spectralCols = 64				-- assuming 16:9
+local spectralRows = 35				-- assuming 16:9
+local spectralCols = 63				-- assuming 16:9
 local spectralDX = sw/spectralCols
 local spectralDY = sh/spectralRows
 
@@ -444,11 +447,11 @@ local Gradient_Gack = function(x, y, z)
 	local T = 7					-- Periods in one revolution
 	local phi = PI/2			-- Phase shift of gacks
 	local M = 1.0				-- Scaling factor on distance to amplitude
-	local N = 0.5 + 0.1*z		-- Scaling factor for wave distortion
-	local A = 0.002				-- Maximum amplitude of shift
+	local N = 0.5				-- Scaling factor for wave distortion
+	local A = 0.005				-- Maximum amplitude of shift
 	
 	
---	y = y + 1					-- Shift y.
+	y = y + z*4/3					-- Shift y.
 	local Trad = T
 	local Bmag = math.sqrt(x*x + y*y)
 --	local Barg = (math.acos(x/(Bmag+0.000001)) + math.asin(y/(Bmag+0.000001))) / 2
@@ -464,8 +467,6 @@ local Gradient_Gack = function(x, y, z)
 	local xn = rn * math.cos(Barg) - thn * math.sin(Barg)
 	local yn = rn * math.sin(Barg) + thn * math.cos(Barg)
 	
---	Trace ('atan(1,0)='..math.atan(1, 0)..', atan(-1,0)='..math.atan(-1, 0)..', atan(0,1)='..math.atan(0, 1)..', atan(0,-1)='..math.atan(0, -1))
-	Trace ('>>>A x = '..x..', y = '..y..': xn = '..xn..', yn = '..yn..'\t\t\tBarg = '..Barg)
 	return xn, yn
 end
 
@@ -491,7 +492,7 @@ for ghostIndex = 1,nGhosts do
 					local verts = CalculateRowBaseVertices(rowIndex)
 					-- verts = CalculateBaseTextures(verts)
 					-- verts = CalculateShiftingTextures(verts, Gradient_NullShift)
-					verts = CalculateShiftingTextures(verts, Gradient_Gack, (ghostIndex-2)*0.5)
+					verts = CalculateShiftingTextures(verts, Gradient_Drip, (ghostIndex-2)*0.5)
 					self:xy(0, 0)
 						:SetVertices(verts)
 						:SetDrawState{First = 1,
@@ -587,8 +588,8 @@ for ghostIndex = 1,nGhosts do
 					Trace("Set texture! woo!")
 				end,
 				OnCommand=function(self)
-					self:xy(sw/2 + sw/2 * SideSign(self:getaux()), sw/2)
-						:blend("BlendMode_WeightedMulitply")
+					self:xy(sw/2 + sw/2 * SideSign(self:getaux()), sh/2)
+--						:blend("BlendMode_WeightedMultiply")
 						:diffusealpha(0.7)
 				end
 			}
@@ -604,7 +605,7 @@ for ghostIndex = 1,nGhosts do
 				Trace("myIndex: "..myIndex)
 				self:z(0.5)
 					:blend("BlendMode_Add")
-					:diffuse({1,1,1,0.4})
+					:diffuse({1,1,1,0.5})
 					:visible(true)
 			end,			
 		}
