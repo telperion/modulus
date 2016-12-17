@@ -770,7 +770,7 @@ local messageList = {
 	{328.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
 	{330.00, "GradientChange", {Gradient_Drip}},
 	{330.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
-	{332.00, "GradientChange", {Gradient_Expand, 4}},
+	{332.00, "GradientChange", {Gradient_Expand, 12}},
 	{343.00, "GhostProxiesOff"},
 	{344.00, "GhostProxiesOn"},
 	{351.00, "GhostProxiesOff"},

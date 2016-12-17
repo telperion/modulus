@@ -97,7 +97,7 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 		if hadToSetNoteskin or hadToEraseTurnMods then
 			-- We changed the noteskin! 
 			-- But the song needs to be restarted or it won't take.
-			SCREENMAN:SetNewScreen("ScreenGameplay"):StartTransitioningScreen("SM_GoToNextScreen");
+			SCREENMAN:SetNewScreen("ScreenGameplay");
 		end
 		
 		Trace("HUD Reducer: Done!")
