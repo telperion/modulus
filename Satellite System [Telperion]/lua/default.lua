@@ -699,23 +699,28 @@ _FG_[#_FG_ + 1] = Def.ActorMultiVertex {
 --	Cyberspace frame
 --
 
+local cyberMini			= 0.4
+local cyberXScl			= 1 - cyberMini * 0.5
+
+local SQRT2_REM			= SQRT2 - 1
 local CornSpriteSize	= 48						-- pixels
 local CyberspaceFrame 	= nil
+local CyberspaceAuxer 	= nil
 local CyberspaceAlpha	= nil
 local CyberCornActors	= {nil, nil, nil, nil}		-- DR, DL, UL, UR
 local CyberSideActors	= {nil, nil, nil, nil}		--  D,  L,  U,  R
 local CyberQuadActors	= {nil, nil, nil, nil}		--  D,  L,  U,  R
---local CyberCornPoints	= {							-- DR, DL, UL, UR
---	{ 128 + 32 * SQRT2,  160 + 32 * SQRT2},
---	{-128 - 32 * SQRT2,  160 + 32 * SQRT2},
---	{-128 - 32 * SQRT2, -160 - 32 * SQRT2},
---	{ 128 + 32 * SQRT2, -160 - 32 * SQRT2},	
---}
+local CyberCornStarts	= {							-- DR, DL, UL, UR
+	{ 128 * cyberXScl + 32 * SQRT2_REM * cyberXScl,  160 + 32 * SQRT2_REM * cyberXScl},
+	{-128 * cyberXScl - 32 * SQRT2_REM * cyberXScl,  160 + 32 * SQRT2_REM * cyberXScl},
+	{-128 * cyberXScl - 32 * SQRT2_REM * cyberXScl, -160 - 32 * SQRT2_REM * cyberXScl},
+	{ 128 * cyberXScl + 32 * SQRT2_REM * cyberXScl, -160 - 32 * SQRT2_REM * cyberXScl},	
+}
 local CyberCornPoints	= {							-- DR, DL, UL, UR
-	{ 128,  160},
-	{-128,  160},
-	{-128, -160},
-	{ 128, -160},
+	{ 128 * cyberXScl + 32 * SQRT2_REM * cyberXScl,  160 + 32 * SQRT2_REM * cyberXScl},
+	{-128 * cyberXScl - 32 * SQRT2_REM * cyberXScl,  160 + 32 * SQRT2_REM * cyberXScl},
+	{-128 * cyberXScl - 32 * SQRT2_REM * cyberXScl, -160 - 32 * SQRT2_REM * cyberXScl},
+	{ 128 * cyberXScl + 32 * SQRT2_REM * cyberXScl, -160 - 32 * SQRT2_REM * cyberXScl},	
 }
 
 function MatrixRotate(angle, point)
@@ -786,10 +791,10 @@ end
 
 
 function CyberspaceFrameUpdate()
-	local angle = CyberspaceFrame:getaux()
+	local angle = CyberspaceAuxer:getaux()
 	local alpha = CyberspaceAlpha:getaux()
 
-	local cornPoints = CornExtents(Extents(angle, CyberCornPoints))
+	local cornPoints = CornExtents(Extents(angle, CyberCornStarts))
 
 
 	for cornIndex = 1,4 do
@@ -820,6 +825,16 @@ function CyberspaceFrameUpdate()
 		if sideLength[2] > 0.01 then
 			CyberSideActors[cornIndex]:zoomx(sideLength[2] / CornSpriteSize - 0.8)		-- Actually too long by 48 px, underlapping corners, but that's OK
 		end
+
+		-- Quad
+		CyberQuadActors[cornIndex]
+			:stretchto(
+				sw * 0.5 * (vertA[1] < 0 and -1 or 1), 
+				sh * 0.5 * (vertA[2] < 0 and -1 or 1),
+				vertB[1],
+				vertB[2]
+				)
+			:diffusealpha(alpha)
 	end
 end
 
@@ -828,22 +843,12 @@ local CyberspaceFrameProto = Def.ActorFrame {
 	Name = "CyberspaceFrame",
 	InitCommand = function(self)
 		CyberspaceFrame = self
-		self:aux(0)
-			:xy(sw / 2, sh / 2)
+		self:xy(sw / 2, sh / 2)
 			:z(3)
 			:SetUpdateFunction(CyberspaceFrameUpdate)
 	end,
 	OnCommand = function(self)
 		self:SetDrawByZPosition(true)
-	end,
-
-	RotateWholeFieldMessageCommand = function(self, args)
-		local tweenTime 	= (#args >= 1) and args[1] or 4
-		local pn 			= (#args >= 2) and args[2] or 1
-		local endingAngle 	= (#args >= 3) and args[3] or 0
-
-		self:smooth(tweenTime / BPS)
-			:aux(endingAngle * DEG_TO_RAD)
 	end,
 }
 
@@ -858,7 +863,7 @@ for cornIndex = 1,4 do
 			self:baserotationz(90 * (cornIndex - 1))
 				:xy(0, 0)
 				:z(0.2)
-				:diffusealpha(0.0)
+				:diffuse({1, 0, 1, 0})
 		end,
 	}
 
@@ -872,7 +877,19 @@ for cornIndex = 1,4 do
 			self:baserotationz(90 * (cornIndex - 1))
 				:xy(0, 0)
 				:z(0.1)
-				:diffusealpha(0.0)
+				:diffuse({1, 0, 1, 0})
+		end,
+	}
+
+	-- Quads
+	CyberspaceFrameProto[#CyberspaceFrameProto + 1] = Def.Quad {
+		Name = "CyberspaceQuad"..cornIndex,
+		OnCommand = function(self)
+			CyberQuadActors[cornIndex] = self
+
+			self:stretchto(0, 0, 0, 0)
+				:z(0.0)
+				:diffuse({0,0,0,0})
 		end,
 	}
 end
@@ -880,6 +897,22 @@ end
 
 
 _FG_[#_FG_ + 1] = CyberspaceFrameProto
+
+_FG_[#_FG_ + 1] = Def.Actor {
+	InitCommand = function(self)
+		CyberspaceAuxer = self
+		self:aux(0.0)
+	end,
+
+	RotateWholeFieldMessageCommand = function(self, args)
+		local tweenTime 	= (#args >= 1) and args[1] or 4
+		local pn 			= (#args >= 2) and args[2] or 1
+		local endingAngle 	= (#args >= 3) and args[3] or 0
+
+		self:smooth(tweenTime / BPS)
+			:aux(endingAngle * DEG_TO_RAD)
+	end,
+}
 
 _FG_[#_FG_ + 1] = Def.Actor {
 	InitCommand = function(self)
@@ -1021,7 +1054,9 @@ for pn = 1,2 do
 			end
 		end,
 		OnCommand = function(self)			
-			self:xy(sw * (0.5 + 0.25 * SideSign(Whomst(self))), sh/2)
+			self:xy(sw * (0.5 + 0.4 * SideSign(Whomst(self))), sh/2)
+				:z(5)
+				:zoom(0.75)
 		end,
 	}
 end
@@ -1223,14 +1258,27 @@ local messageList = {
 	{  4.000, "PixelShow",			{ 1.0, 4}},
 	{  4.000, "HarukaSlideIn",		{-4.0, 32}},
 	{ 32.000, "PixelShow",			{ 0.0, 4}},
+
+	{164.000, "RotateWholeField",	{ 7.0, 3,   75}},
+	{172.000, "RotateWholeField",	{ 7.0, 3,    0}},
+	{180.000, "RotateWholeField",	{ 7.0, 3,  -75}},
+	{188.000, "RotateWholeField",	{ 7.0, 3,    0}},
 }
 
+for chunkIndex = 0,3 do
+	for repIndex = 0,8 do
+		local beatIndex =  36 + 0.75 *  repIndex	  +  8 * chunkIndex
+		local beatDeg 	=		  10 * (repIndex + 1) + 90 * chunkIndex
+		messageList[#messageList + 1] = {beatIndex, "RotateWholeField",	{0.5, 3, beatDeg}}
+	end
+end
 
-for repIndex = 0,9 do
-	local beatIndex = 36 + 0.75 * repIndex
-	local beatDeg 	=		 40 * repIndex
-	messageList[#messageList + 1] = {beatIndex, "RotateWholeField",	{0.5, 1, beatDeg}}
-	messageList[#messageList + 1] = {beatIndex, "RotateWholeField",	{0.5, 2, beatDeg}}
+for chunkIndex = 0,3 do
+	for repIndex = 0,8 do
+		local beatIndex =  68 + 0.75 *  repIndex	  +  8 * chunkIndex
+		local beatDeg 	= 360 -   10 * (repIndex + 1) - 90 * chunkIndex
+		messageList[#messageList + 1] = {beatIndex, "RotateWholeField",	{0.5, 3, beatDeg}}
+	end
 end
 
 
@@ -1320,27 +1368,33 @@ _FG_[#_FG_ + 1] = Def.ActorFrame {
 	-- Control the rotation splines
 	RotateWholeFieldMessageCommand = function(self, args)
 		local tweenTime 	= (#args >= 1) and args[1] or 4
-		local pn 			= (#args >= 2) and args[2] or 1
+		local pnOrBoth		= (#args >= 2) and args[2] or 1
 		local endingAngle 	= (#args >= 3) and args[3] or 0
 
-		local pp = SCREENMAN:GetTopScreen():GetChild('PlayerP'..pn)
-		local nf = pp:GetChild('NoteField')
+		for pn = 1,2 do
+			if pnOrBoth == pn or pnOrBoth == 3 then
+				local pp = SCREENMAN:GetTopScreen():GetChild('PlayerP'..pn)
+				local nf = pp:GetChild('NoteField')
 
-		for i,cv in ipairs(nf:GetColumnActors()) do
-			cv:smooth(tweenTime / BPS)
-			cv:GetRotHandler():SetSplineMode('NoteColumnSplineMode_Offset')
-			cv:GetRotHandler():SetBeatsPerT(1.3 - i * 0.2)
-			local splr = cv:GetRotHandler():GetSpline()
-			splr:SetSize(2)
-			splr:SetPoint(1, {0, 0, -endingAngle * DEG_TO_RAD})
-			splr:SetPoint(2, {0, 0, -endingAngle * DEG_TO_RAD})
-			splr:Solve()
-		end
+				for i,cv in ipairs(nf:GetColumnActors()) do
+					cv:smooth(tweenTime / BPS)
+					cv:GetRotHandler():SetSplineMode('NoteColumnSplineMode_Offset')
+					cv:GetRotHandler():SetBeatsPerT(1.3 - i * 0.2)
+					local splr = cv:GetRotHandler():GetSpline()
+					splr:SetSize(2)
+					splr:SetPoint(1, {0, 0, -endingAngle * DEG_TO_RAD})
+					splr:SetPoint(2, {0, 0, -endingAngle * DEG_TO_RAD})
+					splr:Solve()
+				end
+			end
 
 --		if PlayerProxyActors[pn] then
 --			PlayerProxyActors[pn]:smooth(tweenTime/BPS)
 --								 :rotationz(endingAngle)
 --		end
+
+		end
+
 	end,
 }
 
@@ -1370,6 +1424,7 @@ modsTable = {
 		{   0.0,	"ScrollSpeed",			  1.0,    4.0,	3}, 
 		{   0.0,	"MaxScrollBPM",			  420,    4.0,	3}, 
 		{   0.0,	"Dark",					  0.2,    4.0,	3}, 
+		{   0.0,	"Mini",				cyberMini,    4.0,	3}, 
 }
 
 
