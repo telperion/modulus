@@ -706,6 +706,8 @@ local SQRT2_REM			= SQRT2 - 1
 local CornSpriteSize	= 48						-- pixels
 local CyberspaceFrame 	= nil
 local CyberspaceAuxer 	= nil
+local CyberspaceLRAux 	= nil
+local CyberspaceTBAux 	= nil
 local CyberspaceAlpha	= nil
 local CyberCornActors	= {nil, nil, nil, nil}		-- DR, DL, UL, UR
 local CyberSideActors	= {nil, nil, nil, nil}		--  D,  L,  U,  R
@@ -791,15 +793,34 @@ end
 
 
 function CyberspaceFrameUpdate()
-	local angle = CyberspaceAuxer:getaux()
-	local alpha = CyberspaceAlpha:getaux()
+	local angle 	= CyberspaceAuxer:getaux()
+	local alpha 	= CyberspaceAlpha:getaux()
+	local presLR 	= CyberspaceLRAux:getaux()
+	local presTB 	= CyberspaceTBAux:getaux()
 
 	local cornPoints = CornExtents(Extents(angle, CyberCornStarts))
 
 
 	for cornIndex = 1,4 do
-		local vertA = cornPoints[cornIndex]
-		local vertB = cornPoints[(cornIndex % #cornPoints) + 1]
+		local vbasA = cornPoints[cornIndex]
+		local vbasB = cornPoints[(cornIndex % #cornPoints) + 1]
+
+		-- Fix engagement of LR/TB
+		local scrAX =  (vbasA[1] < 0 and -1 or 1) * sw * 0.5
+		local scrAY =  (vbasA[2] < 0 and -1 or 1) * sh * 0.5
+		local scrBX =  (vbasB[1] < 0 and -1 or 1) * sw * 0.5
+		local scrBY =  (vbasB[2] < 0 and -1 or 1) * sh * 0.5
+
+		local vertA = {
+			vbasA[1] * presLR + scrAX * (1 - presLR),
+			vbasA[2] * presTB + scrAY * (1 - presTB)
+		}
+		local vertB = {
+			vbasB[1] * presLR + scrBX * (1 - presLR),
+			vbasB[2] * presTB + scrBY * (1 - presTB)
+		}
+
+
 		local sideCenter = {
 			(vertA[1] + vertB[1]) / 2,
 			(vertA[2] + vertB[2]) / 2
@@ -921,6 +942,50 @@ _FG_[#_FG_ + 1] = Def.Actor {
 	end,
 }
 
+_FG_[#_FG_ + 1] = Def.Actor {
+	InitCommand = function(self)
+		CyberspaceLRAux = self
+		self:aux(0.0)
+	end,
+
+	EngageLRMessageCommand = function(self, args)
+		local tweenTime 	= (#args >= 1) and args[1] or 4.0
+		local auxExtent 	= (#args >= 2) and args[2] or 1.0
+
+		self:decelerate(tweenTime / BPS)
+			:aux(auxExtent)
+	end,
+	DisengageLRMessageCommand = function(self, args)
+		local tweenTime 	= (#args >= 1) and args[1] or 4.0
+		local auxExtent 	= (#args >= 2) and args[2] or 0.0
+
+		self:accelerate(tweenTime / BPS)
+			:aux(auxExtent)
+	end,
+}
+
+_FG_[#_FG_ + 1] = Def.Actor {
+	InitCommand = function(self)
+		CyberspaceTBAux = self
+		self:aux(0.0)
+	end,
+
+	EngageTBMessageCommand = function(self, args)
+		local tweenTime 	= (#args >= 1) and args[1] or 4.0
+		local auxExtent 	= (#args >= 2) and args[2] or 1.0
+
+		self:decelerate(tweenTime / BPS)
+			:aux(auxExtent)
+	end,
+	DisengageTBMessageCommand = function(self, args)
+		local tweenTime 	= (#args >= 1) and args[1] or 4.0
+		local auxExtent 	= (#args >= 2) and args[2] or 0.0
+
+		self:accelerate(tweenTime / BPS)
+			:aux(auxExtent)
+	end,
+}
+
 
 --
 --	Cyberspace frame
@@ -982,20 +1047,6 @@ for pn = 1,2 do
 						:smooth(args[1] / BPS)
 						:rotationz(args[3])
 				end
-			end,
-			SidewisePlayerProxiesMessageCommand = function(self, args)				
-				local tweenType = args[2] and args[2] or "accelerate"
-				self:finishtweening()
-				self[tweenType](self, args[1] / BPS)
-				self:x(sw * 0.5 + sw * 0.25 * SideSign(Whomst(self)))
-					:diffusealpha(1.0)
-			end,
-			CenterPlayerProxiesMessageCommand = function(self, args)				
-				local tweenType = args[2] and args[2] or "accelerate"
-				self:finishtweening()
-				self[tweenType](self, args[1] / BPS)
-				self:x(sw * 0.5)
-					:diffusealpha(1.0)
 			end,
 		},
 		InitCommand = function(self)
@@ -1252,12 +1303,21 @@ _FG_[#_FG_ + 1] = ghostDude
 --
 
 local messageList = {
+	{  0.000, "DisengageTB",		{ 0.0}},
+	{  0.000, "DisengageLR",		{ 0.0}},
 	{  4.000, "RecenterProxy"},
 
 
 	{  4.000, "PixelShow",			{ 1.0, 4}},
 	{  4.000, "HarukaSlideIn",		{-4.0, 32}},
 	{ 32.000, "PixelShow",			{ 0.0, 4}},
+
+	{ 24.500, "EngageTB",			{ 3.0}},	
+	{ 28.000, "EngageLR",			{ 4.0}},
+
+	{130.500, "DisengageTB",		{ 1.5, 0.5}},
+	{130.500, "DisengageLR",		{ 1.5, 0.2}},
+
 
 	{164.000, "RotateWholeField",	{ 7.0, 3,   75}},
 	{172.000, "RotateWholeField",	{ 7.0, 3,    0}},
@@ -1325,6 +1385,12 @@ gfxUpdateFunction = function()
 		end
 	end
 
+
+	for pn = 1,2 do
+		if PlayerProxyActors[pn] then
+			PlayerProxyActors[pn]:x(sw * 0.5 + sw * 0.25 * SideSign(pn) * (1 - CyberspaceLRAux:getaux()))
+		end
+	end
 
 --	Trace('Update @ ' .. GAMESTATE:GetSongBeat() .. " (" .. GAMESTATE:GetCurMusicSeconds() .. " sec.)")
 end
