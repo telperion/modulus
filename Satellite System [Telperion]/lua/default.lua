@@ -696,6 +696,209 @@ _FG_[#_FG_ + 1] = Def.ActorMultiVertex {
 
 -------------------------------------------------------------------------------
 --
+--	Cyberspace frame
+--
+
+local CornSpriteSize	= 48						-- pixels
+local CyberspaceFrame 	= nil
+local CyberspaceAlpha	= nil
+local CyberCornActors	= {nil, nil, nil, nil}		-- DR, DL, UL, UR
+local CyberSideActors	= {nil, nil, nil, nil}		--  D,  L,  U,  R
+local CyberQuadActors	= {nil, nil, nil, nil}		--  D,  L,  U,  R
+--local CyberCornPoints	= {							-- DR, DL, UL, UR
+--	{ 128 + 32 * SQRT2,  160 + 32 * SQRT2},
+--	{-128 - 32 * SQRT2,  160 + 32 * SQRT2},
+--	{-128 - 32 * SQRT2, -160 - 32 * SQRT2},
+--	{ 128 + 32 * SQRT2, -160 - 32 * SQRT2},	
+--}
+local CyberCornPoints	= {							-- DR, DL, UL, UR
+	{ 128,  160},
+	{-128,  160},
+	{-128, -160},
+	{ 128, -160},
+}
+
+function MatrixRotate(angle, point)
+	local cx = math.cos(angle)
+	local sx = math.sin(angle)
+
+	return {
+		point[1] * cx - point[2] * sx,
+		point[1] * sx + point[2] * cx
+	}
+end
+
+function MinArray(a)
+	if #a < 1 then
+		return nil
+	end
+
+	local a_min = a[1]
+	local minIndex
+	for minIndex = 2,#a do
+		a_min = (a[minIndex] < a_min) and a[minIndex] or a_min
+	end
+
+	return a_min, minIndex
+end
+
+function MaxArray(a)
+	if #a < 1 then
+		return nil
+	end
+
+	local a_max = a[1]
+	local maxIndex
+	for maxIndex = 2,#a do
+		a_max = (a[maxIndex] > a_max) and a[maxIndex] or a_max
+	end
+	
+	return a_max, maxIndex
+end
+
+function Extents(angle, cornPoints)
+	local cornRotated   = {}
+	local cornTpose 	= {{}, {}}		-- x coordinates, y coordinates
+	local cornIndex
+	for cornIndex = 1,#cornPoints do
+		local cr = MatrixRotate(angle, cornPoints[cornIndex])
+		cornTpose[1][cornIndex]	= cr[1]
+		cornTpose[2][cornIndex]	= cr[2]
+		cornRotated[cornIndex]	= cr
+	end
+
+	local extents = {{nil, nil}, {nil, nil}}	-- {{xmin, xmax}, {ymin, ymax}}
+	extents[1][1] = MinArray(cornTpose[1])
+	extents[1][2] = MaxArray(cornTpose[1])
+	extents[2][1] = MinArray(cornTpose[2])
+	extents[2][2] = MaxArray(cornTpose[2])
+	return extents
+end
+
+function CornExtents(extents)
+	return {
+		{extents[1][2], extents[2][2]},
+		{extents[1][1], extents[2][2]},
+		{extents[1][1], extents[2][1]},
+		{extents[1][2], extents[2][1]},
+	}
+end
+
+
+function CyberspaceFrameUpdate()
+	local angle = CyberspaceFrame:getaux()
+	local alpha = CyberspaceAlpha:getaux()
+
+	local cornPoints = CornExtents(Extents(angle, CyberCornPoints))
+
+
+	for cornIndex = 1,4 do
+		local vertA = cornPoints[cornIndex]
+		local vertB = cornPoints[(cornIndex % #cornPoints) + 1]
+		local sideCenter = {
+			(vertA[1] + vertB[1]) / 2,
+			(vertA[2] + vertB[2]) / 2
+		}
+		local sideLength = {
+			math.abs(vertB[1] - vertA[1]),
+			math.abs(vertB[2] - vertA[2])
+		}
+
+		-- Corner
+		CyberCornActors[cornIndex]
+			:xy(vertA[1], vertA[2])
+			:diffusealpha(alpha)
+
+		-- Side
+		CyberSideActors[cornIndex]
+			:xy(sideCenter[1], sideCenter[2])
+			:diffusealpha(alpha)
+
+		if sideLength[1] > 0.01 then
+			CyberSideActors[cornIndex]:zoomx(sideLength[1] / CornSpriteSize - 0.8)		-- Actually too long by 48 px, underlapping corners, but that's OK
+		end
+		if sideLength[2] > 0.01 then
+			CyberSideActors[cornIndex]:zoomx(sideLength[2] / CornSpriteSize - 0.8)		-- Actually too long by 48 px, underlapping corners, but that's OK
+		end
+	end
+end
+
+
+local CyberspaceFrameProto = Def.ActorFrame {
+	Name = "CyberspaceFrame",
+	InitCommand = function(self)
+		CyberspaceFrame = self
+		self:aux(0)
+			:xy(sw / 2, sh / 2)
+			:z(3)
+			:SetUpdateFunction(CyberspaceFrameUpdate)
+	end,
+	OnCommand = function(self)
+		self:SetDrawByZPosition(true)
+	end,
+
+	RotateWholeFieldMessageCommand = function(self, args)
+		local tweenTime 	= (#args >= 1) and args[1] or 4
+		local pn 			= (#args >= 2) and args[2] or 1
+		local endingAngle 	= (#args >= 3) and args[3] or 0
+
+		self:smooth(tweenTime / BPS)
+			:aux(endingAngle * DEG_TO_RAD)
+	end,
+}
+
+for cornIndex = 1,4 do
+	-- Corners
+	CyberspaceFrameProto[#CyberspaceFrameProto + 1] = Def.Sprite {
+		Name = "CyberspaceCorn"..cornIndex,
+		Texture = "corner-tpz.png",
+		OnCommand = function(self)
+			CyberCornActors[cornIndex] = self
+
+			self:baserotationz(90 * (cornIndex - 1))
+				:xy(0, 0)
+				:z(0.2)
+				:diffusealpha(0.0)
+		end,
+	}
+
+	-- Sides
+	CyberspaceFrameProto[#CyberspaceFrameProto + 1] = Def.Sprite {
+		Name = "CyberspaceSide"..cornIndex,
+		Texture = "side-tpz.png",
+		OnCommand = function(self)
+			CyberSideActors[cornIndex] = self
+
+			self:baserotationz(90 * (cornIndex - 1))
+				:xy(0, 0)
+				:z(0.1)
+				:diffusealpha(0.0)
+		end,
+	}
+end
+
+
+
+_FG_[#_FG_ + 1] = CyberspaceFrameProto
+
+_FG_[#_FG_ + 1] = Def.Actor {
+	InitCommand = function(self)
+		CyberspaceAlpha = self
+		self:aux(1.0)
+	end,
+}
+
+
+--
+--	Cyberspace frame
+--
+-------------------------------------------------------------------------------
+
+
+
+
+-------------------------------------------------------------------------------
+--
 -- 		Proxies (as usual)
 --
 
@@ -1020,7 +1223,17 @@ local messageList = {
 	{  4.000, "PixelShow",			{ 1.0, 4}},
 	{  4.000, "HarukaSlideIn",		{-4.0, 32}},
 	{ 32.000, "PixelShow",			{ 0.0, 4}},
-};
+}
+
+
+for repIndex = 0,9 do
+	local beatIndex = 36 + 0.75 * repIndex
+	local beatDeg 	=		 40 * repIndex
+	messageList[#messageList + 1] = {beatIndex, "RotateWholeField",	{0.5, 1, beatDeg}}
+	messageList[#messageList + 1] = {beatIndex, "RotateWholeField",	{0.5, 2, beatDeg}}
+end
+
+
 messageList = SortModsTable(messageList)
 
 gfxUpdateFunction = function()
