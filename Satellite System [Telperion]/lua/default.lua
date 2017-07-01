@@ -172,7 +172,7 @@ local _FG_ = Def.ActorFrame {
 	InitCommand = function(self)
 	end,
 	OnCommand = function(self)
-		self:fov(1)
+		self:fov(45)
 			:vanishpoint(sw/2, sh/4)			
 			:SetDrawByZPosition(true)
 
@@ -241,10 +241,11 @@ local stretchyDX = sw/stretchyCols
 local stretchyDY = sh/stretchyRows
 local texturalDX = twscale/stretchyCols
 local texturalDY = thscale/stretchyRows
-local qq = math.sqrt(sw * sh) * 0.05	-- I don't think we'll use this but w/e
+local qq = -- math.sqrt(sw * sh) * 0.05	-- I don't think we'll use this but w/e
+		   sw 							-- turns out we do!
 
 local nDiscoProxies 	= 4
-local Discothextures 	= {}
+local Discothexture 	= null
 local DiscoProxies 	 	= {{}, {}}
 
 -- Enforce adjacent playfields.
@@ -264,7 +265,16 @@ local discoProxyPeriod 	= 16			-- in beats
 local discoScrAuxActor	= nil			-- controls scrolling of wall
 local discoScrFunction	= Scroller_NullShift	-- controls scrolling of wall (domain and range [0, 1])
 
-function CalculateRowBaseVertices(rowIndex)
+function CalculateRowBaseVertices(rowIndex, useNativeTexCoords)
+	useNativeTexCoords = useNativeTexCoords or false
+
+	local tdx = texturalDX
+	local tdy = texturalDY
+	if useNativeTexCoords then
+		tdx = 1.0/stretchyCols
+		tdy = 1.0/stretchyRows
+	end
+
 	local verts = {}
 	
 	--
@@ -276,12 +286,12 @@ function CalculateRowBaseVertices(rowIndex)
 		verts[#verts+1] = {
 			{tateIndex * stretchyDX - sw/2, (rowIndex-1) * stretchyDY - sh/2, 0},
 			{1, 1, 1, 1},
-			{tateIndex * texturalDX, (rowIndex-1) * texturalDY}
+			{tateIndex * tdx,				(rowIndex-1) * tdy}
 		}
 		verts[#verts+1] = {
 			{tateIndex * stretchyDX - sw/2,  rowIndex    * stretchyDY - sh/2, 0},
 			{1, 1, 1, 1},
-			{tateIndex * texturalDX,  rowIndex    * texturalDY}
+			{tateIndex * tdx, 				 rowIndex    * tdy}
 		}
 	end
 	
@@ -331,6 +341,26 @@ function CalculateQuadsBaseVertices()
 	return verts
 end
 
+local nPathVertices = 60
+local nPathHalf		= 30
+function CalculatePathBaseVertices(radius)
+	radius 		= radius or 0.5 * sh
+
+	local verts = {}
+	
+	for tateIndex = 0, nPathVertices do
+		local angle = tateIndex * 2 * PI / nPathVertices
+		verts[#verts+1] = {
+			{radius * math.cos(angle), 0, radius * math.sin(angle)},
+			{1, 1, 1, 1},
+			{0, 0}
+		}
+	end
+	
+	return verts
+end
+
+
 function Stretcher_NullShift(x, y, z, a)
 	return x, y, z
 end
@@ -341,6 +371,14 @@ function Scroller_NullShift(t)
 	return 0
 end
 discoScrFunction = Scroller_NullShift
+
+
+function Stretcher_DiscoBall(x, y, z, a)
+	local phi = 0.5 * PI * y
+	local theta =     PI * x
+
+	return a * math.cos(phi) * math.cos(theta), math.sin(phi), a * math.cos(phi) * math.sin(theta)
+end
 
 function CalculateStretchedTextures(verts, stretcher, soul, alphabeter)
 	stretcher = stretcher or Stretcher_NullShift
@@ -402,11 +440,9 @@ function CalculatePixelCenteredTextures(verts)
 end
 
 
-DiscoWallsAMV = {nil, nil}
-DiscoWallsProto = {nil, nil}
-DiscoWallsPrefetch = {nil, nil}		-- Eleison
-DiscoWallsReset = {nil}				-- Crowd
-GhostWallsPrefetch = {nil, nil}
+DiscoBallAMV 		= nil
+DiscoBallProto 		= nil
+DiscoBallPrefetch	= {nil}
 
 function substrateAMV(stratagem)
 	local stretchyAMV = 
@@ -432,136 +468,91 @@ function substrateAMV(stratagem)
 	return stretchyAMV
 end
 
-
-DiscoWallsReset = {}
 for rowIndex = 1,stretchyRows do
-	local verts = CalculateRowBaseVertices(rowIndex)
-	verts = CalculateStretchedTextures(verts, Stretcher_Crowd, 0, Alphabeter_NullShift)
-	DiscoWallsReset[rowIndex] = verts
+	local verts = CalculateRowBaseVertices(rowIndex, true)
+	verts = CalculateStretchedTextures(verts, Stretcher_DiscoBall, sh/sw, Alphabeter_NullShift)
+	DiscoBallPrefetch[rowIndex] = verts
 end
 
-GhostWallsPrefetch = {{}, {}}
-for rowIndex = 1,stretchyRows do
-	local verts = CalculateRowBaseVertices(rowIndex)
-	for vi = 1,#verts do
-		verts[vi][2][1] = verts[vi][1][1] / sw * 0.04 + 0.96
-		verts[vi][2][3] = verts[vi][1][2] / sh * 0.04 + 0.96
---		Trace("### verts[vi][1] = "..verts[vi][1][1]..", "..verts[vi][1][2]..";   verts[vi][2] = "..verts[vi][2][1]..", "..verts[vi][2][2]..", "..verts[vi][2][3])
+
+DiscoBallProto = substrateAMV("DiscoBallAMV")
+DiscoBallProto["InitCommand"] = function(self)
+	self:xy(sw/2, sh/2)
+		:z(5)
+		:zoom(0.6)
+		:diffusealpha(1.0)
+	DiscoBallAMV = self
+	ghostSubjects[3] = self
+end
+DiscoBallProto["OnCommand"] = function(self)
+	for rowIndex = 1,stretchyRows do
+		self:GetChild("StretchyAMVStrip_"..rowIndex)
+			:SetVertices(DiscoBallPrefetch[rowIndex])
 	end
-	verts = CalculateStretchedTextures(verts, Stretcher_DiscoWall, 0.02, Alphabeter_NullShift)
-
-	GhostWallsPrefetch[1][rowIndex] = verts
-end
-for rowIndex = 1,stretchyRows do
-	local verts = CalculateRowBaseVertices(rowIndex)
-	GhostWallsPrefetch[2][rowIndex] = verts
 end
 
+DiscoBallProto["RotateJupinvrMessageCommand"] = function(self, args)
+	local tweenTime 	= (#args >= 1) and args[1] or 8
+	local endingAngle 	= (#args >= 2) and args[2] or {0, 0, 0}
+
+	self:smooth(tweenTime / BPS)
+		:rotationx(endingAngle[1])
+		:rotationy(endingAngle[2])
+		:rotationz(endingAngle[3])
+end
 
 
-for dwi = 1,2 do
-	DiscoWallsProto[dwi] = substrateAMV("DiscoWallAMV_"..dwi)
-	DiscoWallsProto[dwi]["InitCommand"] = function(self)
+_FG_[#_FG_ + 1] = DiscoBallProto
+
+
+-- Textures of interest
+_FG_[#_FG_ + 1] = Def.Sprite {
+	Name = "GMSurface",
+	Texture = "jupinvr.png",
+	InitCommand = function(self)
 		self:xy(sw/2, sh/2)
 			:visible(false)
-			:diffusealpha(0.0)
-		DiscoWallsAMV[dwi] = self
-		ghostSubjects[2 + dwi] = self
-	end
-	_FG_[#_FG_ + 1] = DiscoWallsProto[dwi]
 
-
-	DiscoWallsPrefetch[dwi] = {}
-	for rowIndex = 1,stretchyRows do
-		local verts = CalculateRowBaseVertices(rowIndex)
-		verts = CalculateStretchedTextures(verts, Stretcher_Eleison, SideSign(dwi), Alphabeter_Eleison)
-		DiscoWallsPrefetch[dwi][rowIndex] = verts
-	end
-
-	-- Textures of interest
-	local DiscoProjection = Def.ActorFrameTexture {
-		Name = "Discothexture_" .. dwi,
-		InitCommand = function(self)
-			Discothextures[dwi] = self
-
-			self:SetTextureName( self:GetName() )
-				:SetWidth( sw )
-				:SetHeight( sh )
-				:EnableAlphaBuffer( true )
-				:Create()
-
-			DiscoScreen = DiscoWallsAMV[dwi]
-
-			for rowIndex=1,stretchyRows do
-				DiscoScreen:GetChild("StretchyAMVStrip_"..rowIndex)
-						   :SetTexture( self:GetTexture() )
-			end
-		end,
-
-		-- Underlay the arrow fields
-		Def.Quad {
-			InitCommand = function(self)
-				self:xy(sw/2, sh/2 + 8)
-					:z(-1)
-					:SetWidth(sw)
-					:SetHeight(384)
-					:diffuse(0, 0, 0, dwi - 1)
-			end,
-		},
-	}
-
-	for pn = 1,2 do
-		for proxyIndex = 1,nDiscoProxies do
-			DiscoProjection[#DiscoProjection + 1] = Def.ActorFrame {
-				Name = "ProxyP"..pn.."Outer_"..proxyIndex,
-				Def.ActorFrame {	
-					Name = "ProxyP"..pn.."Inner_"..proxyIndex,
-					Def.ActorProxy {					
-						Name = "ProxyP"..pn,
-						InitCommand = function(self)
-							self:aux( Whomst(self) )
-						end,
-						BeginCommand=function(self)
-							local McCoy = SCREENMAN:GetTopScreen():GetChild('PlayerP'..self:getaux())
-							if McCoy then self:SetTarget(McCoy) else self:hibernate(1573) end
-						end,
-						OnCommand=function(self)
-							local McCoy = SCREENMAN:GetTopScreen():GetChild('PlayerP'..self:getaux())
-							if McCoy then 
-								self:xy(-McCoy:GetX(), -McCoy:GetY())
-								self:GetParent():xy(McCoy:GetX(), McCoy:GetY())
-							end
-						end,
-						RecenterProxyMessageCommand=function(self)					
-							local McCoy = SCREENMAN:GetTopScreen():GetChild('PlayerP'..self:getaux())
-							if McCoy then 
-								self:xy(-McCoy:GetX(), -McCoy:GetY())
-								self:GetParent():xy(McCoy:GetX(), McCoy:GetY())
-							end
-						end
-					},
-					InitCommand = function(self)
-		--				self:aux( Whichst(self) )
-						DiscoProxies[dwi][(Whichst(self) - 1) * 2 + Whomst(self)] = self
-					end,
-					OnCommand = function(self)
-						self:zoomx(discoCentralScale)
-					end,
-				},
-				InitCommand = function(self)
-		--			self:aux( Whichst(self) )
-				end,
-				OnCommand = function(self)
-					self:xy(0, 0)
-						:z(2)
-				end,
-			}
+		for rowIndex=1,stretchyRows do
+			DiscoBallAMV:GetChild("StretchyAMVStrip_"..rowIndex)
+					    :SetTexture( self:GetTexture() )
 		end
-	end
+	end,
+}
 
+local SatelliteRingActors = {nil, nil}
+local ringLineWidth = 12
+for ringFB = 1,2 do
+	_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
+		Name = "GMSatelliteRingHalf_"..ringFB,
+		InitCommand = function(self)
+			local verts = CalculatePathBaseVertices(math.sqrt(sh * sw) * 0.4)
 
-	_FG_[#_FG_ + 1] = DiscoProjection
+			SatelliteRingActors[ringFB] = self
+			self:SetVertices(verts)
+				:SetLineWidth(ringLineWidth)
+				:SetDrawState{First = (ringFB-1) * nPathHalf + 1,
+							  Num = nPathHalf+1,
+							  Mode = "DrawMode_LineStrip"}
+				:xy(sw/2, sh/2)
+				:z(5.0 - 0.01 * SideSign(ringFB))
+				:diffuse({0, 1, 1, 0.6})
+
+		end,
+		
+		RotateSatPathMessageCommand = function(self, args)
+			local tweenTime 	= (#args >= 1) and args[1] or 8
+			local endingAngle 	= (#args >= 2) and args[2] or {0, 0}
+
+			self:smooth(tweenTime / BPS)
+				:rotationx(endingAngle[1])
+				-- Do not rotate around the Y-axis!
+				:rotationz(endingAngle[2])
+		end
+	}
 end
+
+
 
 
 _FG_[#_FG_ + 1] = Def.Actor {
@@ -1307,6 +1298,9 @@ local messageList = {
 	{  0.000, "DisengageLR",		{ 0.0}},
 	{  4.000, "RecenterProxy"},
 
+	{  4.000, "RotateJupinvr",		{  4.0, {15,   0,  0}}},
+	{  4.000, "RotateSatPath",		{  4.0, {15,      15}}},
+	{  8.000, "RotateJupinvr",		{ 16.0, {15, 360,  0}}},
 
 	{  4.000, "PixelShow",			{ 1.0, 4}},
 	{  4.000, "HarukaSlideIn",		{-4.0, 32}},
