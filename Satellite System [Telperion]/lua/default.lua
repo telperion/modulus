@@ -166,7 +166,6 @@ function SortModsTable(mt)
 end
 
 
-
 local _DZ_ = Def.ActorFrame {}
 local _FG_ = Def.ActorFrame {
 	InitCommand = function(self)
@@ -182,18 +181,14 @@ local _FG_ = Def.ActorFrame {
 
 
 		-- Random one of four charts, and set both P1 and P2 to this chosen chart.
-		local d1, d2, s1, s2
---		s1 = GAMESTATE:GetCurrentSong():GetOneSteps( "StepsType_Dance_Single", "Difficulty_Hard" );
---		s2 = GAMESTATE:GetCurrentSong():GetOneSteps( "StepsType_Dance_Single", "Difficulty_Challenge" );
-
---		d1 = GAMESTATE:GetCurrentSteps(0):GetDifficulty();
---		d2 = GAMESTATE:GetCurrentSteps(1):GetDifficulty();
-
---		if (d1 ~= "Difficulty_Hard" or d2 ~= "Difficulty_Challenge") then
---			GAMESTATE:SetCurrentSteps(0, s1)
---			GAMESTATE:SetCurrentSteps(1, s2)
---			SCREENMAN:SetNewScreen("ScreenGameplay")
---		end
+		local stepChoices 	= GAMESTATE:GetCurrentSong():GetStepsByStepsType('StepsType_Dance_Single')
+		local whichSteps	= math.random(#stepChoices)
+		for i = 1,20 do
+			if stepChoices[whichSteps]:GetDifficulty() ~= 'Difficulty_Challenge' then
+				break
+			end
+			whichSteps	= math.random(#stepChoices)
+		end
 
 
 		local hamburger = SCREENMAN:GetTopScreen()
@@ -201,17 +196,44 @@ local _FG_ = Def.ActorFrame {
 			hamburger:GetChild("Overlay" ):decelerate(4.0 / BPS):diffusealpha(0.0)
 			hamburger:GetChild("Underlay"):decelerate(4.0 / BPS):diffusealpha(0.0)
 		end
+
 				
 		local playersFound = 0
+		local pickedNewCharts = false
+		local needNoteskinReset = false
+		local targetNoteskin = 'shadow'
 		for pn = 1,2 do
 			pv = plr[pn]
 			if pv then
 				pv:GetChild("Combo"):hibernate(1573)
+
+				pops = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn):GetPlayerOptions("ModsLevel_Song")
+				pops:FailSetting('FailType_Off')
+
+				pops = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn):GetPlayerOptions("ModsLevel_Preferred")
+				local currentNoteskin, isNoteskinSet = pops:NoteSkin(targetNoteskin)
+
+				if currentNoteskin == targetNoteskin or not isNoteskinSet then
+					if not isNoteskinSet then
+						Trace("WARNING: The '"..targetNoteskin.."' noteskin could not be set!")
+					end
+				else
+					needNoteskinReset = true
+				end
+
+				if GAMESTATE:GetCurrentSteps(pn-1):GetDifficulty() == 'Difficulty_Challenge' then
+					GAMESTATE:SetCurrentSteps(pn-1, stepChoices[whichSteps])
+					pickedNewCharts = true
+				end
 			end
 			
-			pops = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn):GetPlayerOptions("ModsLevel_Song")
-			pops:FailSetting('FailType_Off')
 		end
+
+		if pickedNewCharts or needNoteskinReset then
+			_G['satesystScreenCycleComplete'] = true
+			SCREENMAN:SetNewScreen("ScreenGameplay")
+		end
+
 
 		self:sleep(1573)
 	end
@@ -440,9 +462,146 @@ function CalculatePixelCenteredTextures(verts)
 end
 
 
-DiscoBallAMV 		= nil
-DiscoBallProto 		= nil
-DiscoBallPrefetch	= {nil}
+
+local JupinvrRotateXAuxActor	= nil
+local JupinvrRotateYAuxActor	= nil
+local JupinvrRingTiltAuxActor	= nil
+local JupinvrOrbitalAuxActor	= nil
+
+_FG_[#_FG_ + 1] = Def.Actor {
+	InitCommand = function(self)
+		JupinvrRotateXAuxActor = self
+		self:aux(0)
+	end,
+
+	JupinvrRotateXMessageCommand = function(self, args)
+		local duration 	= (#args >= 1) and args[1] or 8
+		local newValue 	= (#args >= 2) and args[2] or 0
+		local tweenType	= (#args >= 3) and args[3] or 'smooth'
+
+		self[tweenType](self, duration / BPS)
+		self:aux(newValue)
+	end,
+}
+
+_FG_[#_FG_ + 1] = Def.Actor {
+	InitCommand = function(self)
+		JupinvrRotateYAuxActor = self
+		self:aux(0)
+	end,
+
+	JupinvrRotateYMessageCommand = function(self, args)
+		local duration 	= (#args >= 1) and args[1] or 8
+		local newValue 	= (#args >= 2) and args[2] or 0
+		local tweenType	= (#args >= 3) and args[3] or 'smooth'
+
+		self[tweenType](self, duration / BPS)
+		self:aux(newValue)
+	end,
+}
+
+_FG_[#_FG_ + 1] = Def.Actor {
+	InitCommand = function(self)
+		JupinvrRingTiltAuxActor = self
+		self:aux(0)
+	end,
+
+	JupinvrRingTiltMessageCommand = function(self, args)
+		local duration 	= (#args >= 1) and args[1] or 8
+		local newValue 	= (#args >= 2) and args[2] or 0
+		local tweenType	= (#args >= 3) and args[3] or 'smooth'
+
+		self[tweenType](self, duration / BPS)
+		self:aux(newValue)
+	end,
+}
+
+_FG_[#_FG_ + 1] = Def.Actor {
+	InitCommand = function(self)
+		JupinvrOrbitalAuxActor = self
+		self:aux(0)
+	end,
+
+	JupinvrOrbitalMessageCommand = function(self, args)
+		local duration 	= (#args >= 1) and args[1] or 8
+		local newValue 	= (#args >= 2) and args[2] or 0
+		local tweenType	= (#args >= 3) and args[3] or 'smooth'
+
+		self[tweenType](self, duration / BPS)
+		self:aux(newValue)
+	end,
+}
+
+
+
+
+local JupinvrFrame		= nil
+local DiscoBallAMV 		= nil
+local SatelliteRingActors = {nil, nil}
+local StarsBGActor		= nil
+local starsW			= 2048
+local starsH			= 512
+local starsTweenWidth	= starsW * 0.5 - sw
+
+
+function JupinvrUpdateFunction()
+	local sysRotationX 	= JupinvrRotateXAuxActor :getaux()		-- in degrees, 0 to 90
+	local sysRotationY 	= JupinvrRotateYAuxActor :getaux()		-- in degrees, -180 to 180
+	local sysTilt		= JupinvrRingTiltAuxActor:getaux()		-- in degrees
+	local orbitalParam	= JupinvrOrbitalAuxActor :getaux()		-- [0, 1) periodic
+
+	DiscoBallAMV
+		:rotationx(sysRotationX)
+		:rotationy(sysRotationY)
+	StarsBGActor
+		:x(starsTweenWidth * -sysRotationY / 180.0)
+
+	local srai
+	for srai = 1,2 do
+		SatelliteRingActors[srai]
+			:rotationx(-sysRotationX)
+			-- Do not rotate around the Y-axis!
+			:rotationz(sysTilt)
+	end
+end
+
+
+
+local JupinvrFrameProto	= Def.ActorFrame {
+	Name = "JupinvrFrame",
+	InitCommand = function(self)
+		JupinvrFrame = self
+		ghostSubjects[3] = self
+
+		self:SetUpdateFunction(JupinvrUpdateFunction)
+	end,
+	OnCommand = function(self)
+		self:fov(45)
+			:vanishpoint(sw*0.50, sh*0.25)	
+			:SetDrawByZPosition(true)
+			:zoom(0.0)
+			:xy(sw / 2, sh / 2)
+			:z(-1)
+	end,
+	EnterJupinvrMessageCommand = function(self, args)
+		local tweenTime 	= (#args >= 1) and args[1] or 8
+		local endingZoom 	= (#args >= 2) and args[2] or 1.0
+
+		self:decelerate(tweenTime / BPS)
+			:zoom(endingZoom)
+	end,
+	LeaveJupinvrMessageCommand = function(self, args)
+		local tweenTime 	= (#args >= 1) and args[1] or 8
+		local endingZoom 	= (#args >= 2) and args[2] or 0.0
+
+		self:accelerate(tweenTime / BPS)
+			:zoom(endingZoom)
+	end,
+}
+
+
+local DiscoBallProto 	= nil
+local DiscoBallPrefetch	= {nil}
 
 function substrateAMV(stratagem)
 	local stretchyAMV = 
@@ -477,12 +636,10 @@ end
 
 DiscoBallProto = substrateAMV("DiscoBallAMV")
 DiscoBallProto["InitCommand"] = function(self)
-	self:xy(sw/2, sh/2)
-		:z(5)
+	self:z(5)
 		:zoom(0.6)
 		:diffusealpha(1.0)
 	DiscoBallAMV = self
-	ghostSubjects[3] = self
 end
 DiscoBallProto["OnCommand"] = function(self)
 	for rowIndex = 1,stretchyRows do
@@ -502,16 +659,15 @@ DiscoBallProto["RotateJupinvrMessageCommand"] = function(self, args)
 end
 
 
-_FG_[#_FG_ + 1] = DiscoBallProto
+JupinvrFrameProto[#JupinvrFrameProto + 1] = DiscoBallProto
 
 
 -- Textures of interest
-_FG_[#_FG_ + 1] = Def.Sprite {
+JupinvrFrameProto[#JupinvrFrameProto + 1] = Def.Sprite {
 	Name = "GMSurface",
 	Texture = "jupinvr.png",
 	InitCommand = function(self)
-		self:xy(sw/2, sh/2)
-			:visible(false)
+		self:visible(false)
 
 		for rowIndex=1,stretchyRows do
 			DiscoBallAMV:GetChild("StretchyAMVStrip_"..rowIndex)
@@ -520,10 +676,9 @@ _FG_[#_FG_ + 1] = Def.Sprite {
 	end,
 }
 
-local SatelliteRingActors = {nil, nil}
 local ringLineWidth = 12
 for ringFB = 1,2 do
-	_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
+	JupinvrFrameProto[#JupinvrFrameProto + 1] = Def.ActorMultiVertex {
 		Name = "GMSatelliteRingHalf_"..ringFB,
 		InitCommand = function(self)
 			local verts = CalculatePathBaseVertices(math.sqrt(sh * sw) * 0.4)
@@ -534,7 +689,6 @@ for ringFB = 1,2 do
 				:SetDrawState{First = (ringFB-1) * nPathHalf + 1,
 							  Num = nPathHalf+1,
 							  Mode = "DrawMode_LineStrip"}
-				:xy(sw/2, sh/2)
 				:z(5.0 - 0.01 * SideSign(ringFB))
 				:diffuse({0, 1, 1, 0.6})
 
@@ -552,39 +706,19 @@ for ringFB = 1,2 do
 	}
 end
 
+_FG_[#_FG_ + 1] = JupinvrFrameProto
 
 
 
-_FG_[#_FG_ + 1] = Def.Actor {
+_FG_[#_FG_ + 1] = Def.Sprite {
+	Name = "GMSpace",
+	Texture = "stars.png",
 	InitCommand = function(self)
-		discoScrAuxActor = self
-		self:aux(0)
-	end,
+		StarsBGActor = self
 
-	CrowdTimeMessageCommand = function(self, args)
---		Trace("CrowdTime @ discoScrAuxActor: "..overtime)
-		local duration 	= (#args >= 1) and args[1] or 8
-
-		self:linear(duration / BPS)
-			:aux(1)
-	end,
-
-	CrowdResetMessageCommand = function(self, args)	
-		self:linear(1.0 / BPS)
-			:aux(0)
-	end,
-
-	DiscoTimeMessageCommand = function(self, args)
---		Trace("DiscoTime @ discoScrAuxActor: "..overtime)
-		local duration 	= (#args >= 1) and args[1] or 8
-
-		self:linear(duration / BPS)
-			:aux(1)
-	end,
-
-	DiscoResetMessageCommand = function(self, args)	
-		self:linear(1.0 / BPS)
-			:aux(0)
+		self:xy(sw - starsW/2, sh/2)
+			:z(-3)
+			:zoom(2)
 	end,
 }
 
@@ -1298,9 +1432,12 @@ local messageList = {
 	{  0.000, "DisengageLR",		{ 0.0}},
 	{  4.000, "RecenterProxy"},
 
-	{  4.000, "RotateJupinvr",		{  4.0, {15,   0,  0}}},
-	{  4.000, "RotateSatPath",		{  4.0, {15,      15}}},
-	{  8.000, "RotateJupinvr",		{ 16.0, {15, 360,  0}}},
+
+	{  0.000, "JupinvrRotateX",		{ 0.0,   15}},
+	{  0.000, "JupinvrRingTilt",	{ 0.0,   15}},
+	{  0.000, "JupinvrRotateY",		{ 0.0, -180}},
+
+
 
 	{  4.000, "PixelShow",			{ 1.0, 4}},
 	{  4.000, "HarukaSlideIn",		{-4.0, 32}},
@@ -1309,14 +1446,53 @@ local messageList = {
 	{ 24.500, "EngageTB",			{ 3.0}},	
 	{ 28.000, "EngageLR",			{ 4.0}},
 
-	{130.500, "DisengageTB",		{ 1.5, 0.5}},
-	{130.500, "DisengageLR",		{ 1.5, 0.2}},
 
+	{ 98.000, "DisengageTB",		{ 1.5}},
+	{ 98.000, "DisengageLR",		{ 1.5}},
+	{ 99.000, "EnterJupinvr",		{ 1.0, 1.0}},
+
+	{100.000, "JupinvrRotateY",		{ 7.0,  -90, 'linear'}},
+	{108.000, "JupinvrRotateY",		{ 7.0,    0, 'linear'}},
+	{116.000, "JupinvrRotateY",		{ 7.0,   90, 'linear'}},
+	{124.000, "JupinvrRotateY",		{ 7.0,  180, 'linear'}},
+	{100.000, "JupinvrRingTilt",	{ 7.0,  -10}},
+	{108.000, "JupinvrRingTilt",	{ 7.0,   10}},
+	{116.000, "JupinvrRingTilt",	{ 7.0,  -20}},
+	{124.000, "JupinvrRingTilt",	{ 7.0,   20}},
+
+	{130.500, "LeaveJupinvr",		{ 1.5}},
+
+	{130.500, "EngageTB",			{ 1.5, 0.5}},
+	{130.500, "EngageLR",			{ 1.5, 0.2}},
+
+	{163.000, "EngageTB",			{ 1.0}},
+	{163.000, "EngageLR",			{ 1.0}},
 
 	{164.000, "RotateWholeField",	{ 7.0, 3,   75}},
 	{172.000, "RotateWholeField",	{ 7.0, 3,    0}},
 	{180.000, "RotateWholeField",	{ 7.0, 3,  -75}},
 	{188.000, "RotateWholeField",	{ 7.0, 3,    0}},
+
+
+	{195.000, "DisengageTB",		{ 1.0}},
+	{195.000, "DisengageLR",		{ 1.0}},
+	{195.000, "EnterJupinvr",		{ 1.0, 1.0}},
+
+	{196.000, "JupinvrRotateY",		{ 7.0,   90, 'linear'}},
+	{204.000, "JupinvrRotateY",		{ 7.0,    0, 'linear'}},
+	{212.000, "JupinvrRotateY",		{ 7.0,  -90, 'linear'}},
+	{220.000, "JupinvrRotateY",		{ 7.0, -180, 'linear'}},
+	{196.000, "JupinvrRingTilt",	{ 7.0,  -15}},
+	{204.000, "JupinvrRingTilt",	{ 7.0,   15}},
+	{212.000, "JupinvrRingTilt",	{ 7.0,  -30}},
+	{220.000, "JupinvrRingTilt",	{ 7.0,   30}},
+
+
+	{220.000, "EngageTB",			{ 8.0}},
+	{220.000, "EngageLR",			{ 8.0}},
+	{220.000, "LeaveJupinvr",		{ 8.0}},
+
+
 }
 
 for chunkIndex = 0,3 do
