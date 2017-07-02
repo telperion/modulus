@@ -218,7 +218,7 @@ local _FG_ = Def.ActorFrame {
 						Trace("WARNING: The '"..targetNoteskin.."' noteskin could not be set!")
 					end
 				else
-					needNoteskinReset = true
+--					needNoteskinReset = true
 				end
 
 				if GAMESTATE:GetCurrentSteps(pn-1):GetDifficulty() == 'Difficulty_Challenge' then
@@ -759,8 +759,19 @@ for pn = 1,2 do
 			self:aux( Whomst(self) )
 		end,
 		BeginCommand=function(self)
-			local McCoy = SCREENMAN:GetTopScreen():GetChild('PlayerP'..self:getaux())
-			if McCoy then self:SetTarget(McCoy) else self:hibernate(1573) end
+			local McCoy = SCREENMAN:GetTopScreen():GetChild('PlayerP'..  self:getaux())
+			if McCoy then
+				self:SetTarget(McCoy)
+				return
+			end
+
+			local McCoy = SCREENMAN:GetTopScreen():GetChild('PlayerP'..3-self:getaux())
+			if McCoy then
+				self:SetTarget(McCoy)
+				return
+			end
+			
+			self:hibernate(1573)
 		end,
 	}
 end
@@ -1557,8 +1568,8 @@ local messageList = {
 	{220.000, "JupinvrRingTilt",	{ 7.0,   30}},
 
 
-	{220.000, "EngageTB",			{ 8.0}},
-	{220.000, "EngageLR",			{ 8.0}},
+	{224.000, "EngageTB",			{ 4.0}},
+	{224.000, "EngageLR",			{ 4.0}},
 	{220.000, "LeaveJupinvr",		{ 8.0}},
 
 
@@ -1640,36 +1651,6 @@ end
 -- Messaging controller
 --
 _FG_[#_FG_ + 1] = Def.ActorFrame {
-	CrowdEngageMessageCommand = function(self, args)
-		local engageTime	= (#args >= 1) and args[1] or 1
-		for dwi = 1,2 do
-			if DiscoWallsAMV[dwi] then
-				for rowIndex = 1,stretchyRows do
-					rowActor = DiscoWallsAMV[dwi]:GetChild("StretchyAMVStrip_" .. rowIndex)
-					if rowActor then
-						rowActor:finishtweening()
-								:decelerate(engageTime / BPS)
-								:SetVertices(DiscoWallsReset[rowIndex])
-					end
-				end
-
-				if dwi == 1 then
-					DiscoWallsAMV[dwi]:visible(true)
-									  :decelerate(engageTime / BPS)
-									  :diffuse(1.0, 1.0, 1.0, 1.0)
-									  :y(sh * 0.5)
-				else
-					DiscoWallsAMV[dwi]:decelerate(engageTime / BPS)
-									  :diffusealpha(0.0)
-									  :y(sh * 0.5)
-				end
-			end
-		end
-
-		discoScrFunction = Scroller_Crowd
-		discoCrowd = true
-	end,
-
 	-- Control the rotation splines
 	RotateWholeFieldMessageCommand = function(self, args)
 		local tweenTime 	= (#args >= 1) and args[1] or 4
