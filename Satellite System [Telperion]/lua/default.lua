@@ -321,8 +321,8 @@ function CalculateRowBaseVertices(rowIndex, useNativeTexCoords)
 end
 
 -- For pixel AMV only!
-local pixelRows = 60					-- assuming 4:3
-local pixelCols = 80					-- assuming 4:3
+local pixelRows =  80					-- assuming 4:3
+local pixelCols = 105					-- assuming 4:3
 local pixelDX = sw/pixelCols
 local pixelDY = sh/pixelRows
 local texelDX = twscale/pixelCols
@@ -467,6 +467,7 @@ local JupinvrRotateXAuxActor	= nil
 local JupinvrRotateYAuxActor	= nil
 local JupinvrRingTiltAuxActor	= nil
 local JupinvrOrbitalAuxActor	= nil
+local JupinvrTransitAuxActor	= nil
 
 _FG_[#_FG_ + 1] = Def.Actor {
 	InitCommand = function(self)
@@ -532,6 +533,28 @@ _FG_[#_FG_ + 1] = Def.Actor {
 	end,
 }
 
+_FG_[#_FG_ + 1] = Def.Actor {
+	InitCommand = function(self)
+		JupinvrTransitAuxActor = self
+		self:aux(0)
+	end,
+
+	EnterJupinvrMessageCommand = function(self, args)
+		local tweenTime 	= (#args >= 1) and args[1] or 8
+		local endingZoom 	= (#args >= 2) and args[2] or 1.0
+
+		self:decelerate(tweenTime / BPS)
+			:aux(endingZoom)
+	end,
+	LeaveJupinvrMessageCommand = function(self, args)
+		local tweenTime 	= (#args >= 1) and args[1] or 8
+		local endingZoom 	= (#args >= 2) and args[2] or 0.0
+
+		self:accelerate(tweenTime / BPS)
+			:aux(endingZoom)
+	end,
+}
+
 
 
 
@@ -552,6 +575,10 @@ function JupinvrUpdateFunction()
 	local sysRotationY 	= JupinvrRotateYAuxActor :getaux()		-- in degrees, -180 to 180
 	local sysTilt		= JupinvrRingTiltAuxActor:getaux()		-- in degrees
 	local orbitalParam	= JupinvrOrbitalAuxActor :getaux()		-- [0, 1) periodic
+	local sysTransition	= JupinvrTransitAuxActor :getaux()		-- [0, 1]
+
+	JupinvrFrame
+		:zoom(sysTransition)
 
 	DiscoBallAMV
 		:rotationx(sysRotationX)
@@ -568,8 +595,7 @@ function JupinvrUpdateFunction()
 	end
 
 	local playerIndex
-	local paParam = JupinvrFrame:GetZoom()
-	local playerAlpha = (1.0 - paParam) * (1.0 - paParam)
+	local playerAlpha = 1.0 - sysTransition --(1.0 - sysTransition) * (1.0 - sysTransition)
 	-- Orbital parameter a:		(cos a, 0, sin a)
 	-- After system tilt w:		(cos a, sin a sin w, sin a cos w)
 	-- After ring tilt   t:		(cos a cos t - sin a sin w sin t,
@@ -593,7 +619,7 @@ function JupinvrUpdateFunction()
 			:xy(ss * xx - sw * 0.5, ss * yy - sh * 0.5)
 			:z(ss * zz)
 
-		PlayerProxyActors[playerIndex]:diffusealpha(playerAlpha)
+		PlayerProxySprites[playerIndex]:diffusealpha(playerAlpha)
 	end
 
 end
@@ -615,20 +641,6 @@ local JupinvrFrameProto	= Def.ActorFrame {
 			:zoom(0.0)
 			:xy(sw / 2, sh / 2)
 			:z(-1)
-	end,
-	EnterJupinvrMessageCommand = function(self, args)
-		local tweenTime 	= (#args >= 1) and args[1] or 8
-		local endingZoom 	= (#args >= 2) and args[2] or 1.0
-
-		self:decelerate(tweenTime / BPS)
-			:zoom(endingZoom)
-	end,
-	LeaveJupinvrMessageCommand = function(self, args)
-		local tweenTime 	= (#args >= 1) and args[1] or 8
-		local endingZoom 	= (#args >= 2) and args[2] or 0.0
-
-		self:accelerate(tweenTime / BPS)
-			:zoom(endingZoom)
 	end,
 }
 
@@ -787,7 +799,7 @@ _FG_[#_FG_ + 1] = Def.Sprite {
 --
 local IntroBaseTexture = nil
 
-local harukaTilt 	= 60	-- degrees
+local harukaTilt 	= 45	-- degrees
 local harukaL 		= 1024
 local harukaW 		= 720
 
@@ -802,30 +814,33 @@ _FG_[#_FG_ + 1] = Def.ActorFrameTexture {
 			:EnableAlphaBuffer( true )
 			:Create()
 	end,
-	OnCommand = function(self)
-		self:fov(70)
-			:vanishpoint(sw / 2, sh / 2)
-	end,
 
-	Def.Sprite {
-		Name = "HarukaMukashii",
-		Texture = "satesyst-intro.png",
-		InitCommand = function(self)
-			self:x(sw / 2)
-				:y(sh + math.cos(harukaTilt * DEG_TO_RAD) * harukaL * 0.5)
-				:z(math.sin(harukaTilt * DEG_TO_RAD) * harukaL * 0.5)
-				:rotationx(-harukaTilt)
-				:diffuse(1.0, 1.0, 1.0, 1.0)
+	Def.ActorFrame {
+		OnCommand = function(self)
+			self:fov(70)
+				:vanishpoint(sw / 2, sh / 2)
 		end,
 
-		HarukaSlideInMessageCommand = function(self, args)
-			local distance 	= args[1] and args[1] or -1.0
-			local tweenTime	= args[2] and args[2] or 16.0
+		Def.Sprite {
+			Name = "HarukaMukashii",
+			Texture = "satesyst-intro.png",
+			InitCommand = function(self)
+				self:x(sw / 2)
+					:y(sh + math.cos(harukaTilt * DEG_TO_RAD) * harukaL * 0.5)
+					:z(math.sin(harukaTilt * DEG_TO_RAD) * harukaL * 0.5)
+					:rotationx(-harukaTilt)
+					:diffuse(1.0, 1.0, 1.0, 1.0)
+			end,
 
-			self:linear(tweenTime)
-				:addy(distance * harukaL * math.cos(harukaTilt * DEG_TO_RAD))
-				:addz(distance * harukaL * math.sin(harukaTilt * DEG_TO_RAD))
-		end,
+			HarukaSlideInMessageCommand = function(self, args)
+				local distance 	= args[1] and args[1] or -1.0
+				local tweenTime	= args[2] and args[2] or 16.0
+
+				self:linear(tweenTime)
+					:addy(distance * harukaL * math.cos(harukaTilt * DEG_TO_RAD))
+					:addz(distance * harukaL * math.sin(harukaTilt * DEG_TO_RAD))
+			end,
+		},
 	},
 }
 
@@ -1486,7 +1501,7 @@ local messageList = {
 	{  0.000, "JupinvrRotateY",		{ 0.0, -180}},
 
 	{  4.000, "PixelShow",			{ 1.0, 4}},
-	{  4.000, "HarukaSlideIn",		{-4.0, 32}},
+	{  4.000, "HarukaSlideIn",		{-3.0, 32}},
 	{ 32.000, "PixelShow",			{ 0.0, 4}},
 
 	{ 24.500, "EngageTB",			{ 3.0}},	
@@ -1704,6 +1719,7 @@ _FG_[#_FG_ + 1] = Def.ActorFrame {
 
 
 -- Load the mods table parser into this script.
+local sheefturzerus = 0.1
 modsTable = {
 	-- [1]: beat start
 	-- [2]: mod type
@@ -1719,12 +1735,100 @@ modsTable = {
 
 		{   4.0,	"Dark",					  0.0,   32.0,	3}, 
 		{  99.0,	"Mini",		cyberMininininini,    1.0,	3}, 
+		{  99.0,	"Reverse",				  0.2,    1.0,	3}, 
 
 		{ 130.5,	"Mini",				cyberMini,    1.5,	3}, 
+		{ 130.5,	"Reverse",				  0.0,    1.5,	3}, 
+
+
+		{ 132.25,	"Tiny",					  1.0,    0.25,	3}, 
+		{ 132.75,	"Tiny",					  0.0,    0.25,	3}, 
+		{ 133.25,	"Tiny",					 -0.5,    0.25,	3}, 
+		{ 133.75,	"Tiny",					  0.0,    0.25,	3}, 
+
+		{ 134.75,	"Cross",	  sheefturzerus*2,	  0.25,	3 },
+		{ 134.75,	"Reverse",	 -sheefturzerus,  	  0.25,	3 },
+		{ 135.25,	"Cross",	 -sheefturzerus*2,	  0.25,	3 },
+		{ 135.25,	"Reverse",	  sheefturzerus,  	  0.25,	3 },
+		{ 135.75,	"Cross",	  			  0.0,	  0.25,	3 },
+		{ 135.75,	"Reverse",	 			  0.0, 	  0.25,	3 },
+
+		{ 136.75,	"Cross",	 -sheefturzerus*2,	  0.25,	3 },
+		{ 136.75,	"Reverse",	  sheefturzerus,  	  0.25,	3 },
+		{ 137.25,	"Cross",	  sheefturzerus*2,	  0.25,	3 },
+		{ 137.25,	"Reverse",	 -sheefturzerus,  	  0.25,	3 },
+		{ 137.75,	"Cross",	  			  0.0,	  0.25,	3 },
+		{ 137.75,	"Reverse",	 			  0.0, 	  0.25,	3 },
+
+		{ 140.00,	"Tipsy",				  2.0,    5.25,	1}, 
+		{ 140.00,	"Drunk",				  2.0,    5.25,	1}, 
+		{ 140.00,	"Dizzy",				  3.0,    5.25,	1}, 
+		{ 140.00,	"Twirl",				  0.5,    5.25,	1},
+		{ 140.00,	"Tipsy",				 -2.0,    5.25,	2}, 
+		{ 140.00,	"Drunk",				 -2.0,    5.25,	2}, 
+		{ 140.00,	"Dizzy",				 -3.0,    5.25,	2}, 
+		{ 140.00,	"Twirl",				 -0.5,    5.25,	2},
+		{ 145.25,	"Tipsy",				  0.0,    0.75,	3}, 
+		{ 145.25,	"Drunk",				  0.0,    0.75,	3}, 
+		{ 145.25,	"Dizzy",				  0.0,    0.75,	3}, 
+		{ 145.25,	"Twirl",				  0.0,    0.75,	3},
+
+		{ 145.75,	"Alternate", -sheefturzerus*2,	  0.25,	3 },
+		{ 145.75,	"Reverse",	  sheefturzerus,  	  0.25,	3 },
+		{ 146.25,	"Alternate",  sheefturzerus*2,	  0.25,	3 },
+		{ 146.25,	"Reverse",	 -sheefturzerus,  	  0.25,	3 },
+		{ 146.75,	"Alternate", -sheefturzerus*2,	  0.25,	3 },
+		{ 146.75,	"Reverse",	  sheefturzerus,  	  0.25,	3 },
+		{ 147.25,	"Alternate",  sheefturzerus*2,	  0.25,	3 },
+		{ 147.25,	"Reverse",	 -sheefturzerus,  	  0.25,	3 },
+		{ 147.75,	"Alternate", 			  0.0,	  0.25,	3 },
+		{ 147.75,	"Reverse",				  0.0,    0.25,	3 },
+
+
+		{ 148.25,	"Tiny",					  1.0,    0.25,	3}, 
+		{ 148.75,	"Tiny",					  0.0,    0.25,	3}, 
+		{ 149.25,	"Tiny",					 -0.5,    0.25,	3}, 
+		{ 149.75,	"Tiny",					  0.0,    0.25,	3}, 
+
+		{ 150.75,	"Split",	  sheefturzerus*2,	  0.25,	3 },
+		{ 150.75,	"Reverse",	 -sheefturzerus,  	  0.25,	3 },
+		{ 151.25,	"Split",	 -sheefturzerus*2,	  0.25,	3 },
+		{ 151.25,	"Reverse",	  sheefturzerus,  	  0.25,	3 },
+		{ 151.75,	"Split",	  			  0.0,	  0.25,	3 },
+		{ 151.75,	"Reverse",	 			  0.0, 	  0.25,	3 },
+
+		{ 152.75,	"Split",	 -sheefturzerus*2,	  0.25,	3 },
+		{ 152.75,	"Reverse",	  sheefturzerus,  	  0.25,	3 },
+		{ 153.25,	"Split",	  sheefturzerus*2,	  0.25,	3 },
+		{ 153.25,	"Reverse",	 -sheefturzerus,  	  0.25,	3 },
+		{ 153.75,	"Split",	  			  0.0,	  0.25,	3 },
+		{ 153.75,	"Reverse",	 			  0.0, 	  0.25,	3 },
+
+		{ 156.00,	"Tipsy",				  2.0,    5.25,	1}, 
+		{ 156.00,	"Drunk",				  2.0,    5.25,	1}, 
+		{ 156.00,	"Roll",					  0.5,    5.25,	1}, 
+		{ 156.00,	"Dizzy",				  3.0,    5.25,	1},
+		{ 156.00,	"Tipsy",				 -2.0,    5.25,	2}, 
+		{ 156.00,	"Drunk",				 -2.0,    5.25,	2}, 
+		{ 156.00,	"Roll",					 -0.5,    5.25,	2}, 
+		{ 156.00,	"Dizzy",				 -3.0,    5.25,	2},
+		{ 161.25,	"Tipsy",				  0.0,    0.75,	3}, 
+		{ 161.25,	"Drunk",				  0.0,    0.75,	3}, 
+		{ 161.25,	"Roll",					  0.0,    0.75,	3}, 
+		{ 161.25,	"Dizzy",				  0.0,    0.75,	3},
+
+		{ 162.95,	"Stealth", 				  0.8,	  0.05,	3 },
+		{ 162.95,	"Dark", 				  1.0,	  0.05,	3 },
+		{ 163.00,	"Stealth", 				  0.0,	  1.00,	3 },
+		{ 163.00,	"Dark", 				  0.0,	  1.00,	3 },
+
+
 
 		{ 195.0,	"Mini",		cyberMininininini,    1.0,	3}, 
+		{ 195.0,	"Reverse",				  0.2,    1.0,	3}, 
 
-		{ 220.0,	"Mini",				cyberMini,    8.0,	3}, 
+		{ 220.0,	"Mini",				cyberMini,    8.0,	3},
+		{ 220.0,	"Reverse",				  0.0,    8.0,	3},  
 		{ 220.0,	"Dark",					  1.0,    8.0,	3}, 
 }
 
@@ -1737,8 +1841,33 @@ function AddURShift(playerNumber, beatIndex, duration, shiftU, shiftR)
 	modsTable[#modsTable + 1] = {beatIndex,	"Invert",   i,	duration,	playerNumber}
 end
 
+-- Difficult Rhythms !!
+for beatIndex = 100,116,8 do
+	AddURShift(3, beatIndex - 0.25, 0.25,  0.00, -1.00)
+	AddURShift(3, beatIndex + 6.00, 1.00,  0.00,  0.00)
+end
+for beatIndex = 196,212,8 do
+	AddURShift(3, beatIndex - 0.25, 0.25,  0.00, -1.00)
+	AddURShift(3, beatIndex + 6.00, 1.00,  0.00,  0.00)
+end
 
--- Closing
+-- wheeeeee
+AddURShift(3, 135.00, 0.25,  1.00, -1.00)
+AddURShift(3, 135.50, 0.25,  0.00,  0.00)
+AddURShift(3, 137.00, 0.25,  1.00, -1.00)
+AddURShift(3, 137.50, 0.25,  0.00,  0.00)
+
+AddURShift(3, 146.00, 0.25,  1.00, -1.00)
+AddURShift(3, 146.50, 0.25,  0.00,  0.00)
+AddURShift(3, 147.00, 0.25,  1.00, -1.00)
+AddURShift(3, 147.50, 0.25,  0.00,  0.00)
+
+AddURShift(3, 151.00, 0.25, -2.00, -2.00)
+AddURShift(3, 151.50, 0.25,  0.00,  0.00)
+AddURShift(3, 153.00, 0.25, -2.00, -2.00)
+AddURShift(3, 153.50, 0.25,  0.00,  0.00)
+
+
 
 modsTable = SortModsTable(modsTable)
 _FG_[#_FG_ + 1] = LoadActor("./modsHQ.lua", {modsTable, 0})
