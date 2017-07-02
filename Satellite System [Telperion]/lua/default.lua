@@ -538,6 +538,9 @@ _FG_[#_FG_ + 1] = Def.Actor {
 local JupinvrFrame		= nil
 local DiscoBallAMV 		= nil
 local SatelliteRingActors = {nil, nil}
+local SatelliteProxyActors = {nil, nil}
+local ringTilt 			= 15
+local ringRadius 		= math.sqrt(sh * sw) * 0.4
 local StarsBGActor		= nil
 local starsW			= 2048
 local starsH			= 512
@@ -559,10 +562,40 @@ function JupinvrUpdateFunction()
 	local srai
 	for srai = 1,2 do
 		SatelliteRingActors[srai]
-			:rotationx(-sysRotationX)
+			:rotationx(sysTilt)
 			-- Do not rotate around the Y-axis!
-			:rotationz(sysTilt)
+			:rotationz(ringTilt)
 	end
+
+	local playerIndex
+	local paParam = JupinvrFrame:GetZoom()
+	local playerAlpha = (1.0 - paParam) * (1.0 - paParam)
+	-- Orbital parameter a:		(cos a, 0, sin a)
+	-- After system tilt w:		(cos a, sin a sin w, sin a cos w)
+	-- After ring tilt   t:		(cos a cos t - sin a sin w sin t,
+	--							 sin a sin w cos t + cos a sin t,
+	--							 sin a cos w)
+	local jca = math.cos(orbitalParam 	* 2 * PI) * ringRadius
+	local jsa = math.sin(orbitalParam 	* 2 * PI) * ringRadius
+	local jcw = math.cos(sysTilt 	* DEG_TO_RAD)
+	local jsw = math.sin(sysTilt 	* DEG_TO_RAD)
+	local jct = math.cos(ringTilt 	* DEG_TO_RAD)
+	local jst = math.sin(ringTilt 	* DEG_TO_RAD)
+	
+	-- z abscissa, x ordinate!
+	local xx = jsa*jct - jca*jsw*jst
+	local yy = jca*jsw*jct + jsa*jst
+	local zz = jca*jcw
+	for playerIndex = 1,2 do
+		local ss = SideSign(playerIndex)
+
+		SatelliteProxyActors[playerIndex]
+			:xy(ss * xx - sw * 0.5, ss * yy - sh * 0.5)
+			:z(ss * zz)
+
+		PlayerProxyActors[playerIndex]:diffusealpha(playerAlpha)
+	end
+
 end
 
 
@@ -681,7 +714,7 @@ for ringFB = 1,2 do
 	JupinvrFrameProto[#JupinvrFrameProto + 1] = Def.ActorMultiVertex {
 		Name = "GMSatelliteRingHalf_"..ringFB,
 		InitCommand = function(self)
-			local verts = CalculatePathBaseVertices(math.sqrt(sh * sw) * 0.4)
+			local verts = CalculatePathBaseVertices(ringRadius)
 
 			SatelliteRingActors[ringFB] = self
 			self:SetVertices(verts)
@@ -703,6 +736,20 @@ for ringFB = 1,2 do
 				-- Do not rotate around the Y-axis!
 				:rotationz(endingAngle[2])
 		end
+	}
+end
+
+for pn = 1,2 do
+	JupinvrFrameProto[#JupinvrFrameProto + 1] = Def.ActorProxy {					
+		Name = "JupinvrProxyP"..pn,
+		InitCommand = function(self)
+			SatelliteProxyActors[pn] = self
+			self:aux( Whomst(self) )
+		end,
+		BeginCommand=function(self)
+			local McCoy = SCREENMAN:GetTopScreen():GetChild('PlayerP'..self:getaux())
+			if McCoy then self:SetTarget(McCoy) else self:hibernate(1573) end
+		end,
 	}
 end
 
@@ -825,6 +872,7 @@ _FG_[#_FG_ + 1] = Def.ActorMultiVertex {
 --
 
 local cyberMini			= 0.4
+local cyberMininininini	= 0.8
 local cyberXScl			= 1 - cyberMini * 0.5
 
 local SQRT2_REM			= SQRT2 - 1
@@ -1437,8 +1485,6 @@ local messageList = {
 	{  0.000, "JupinvrRingTilt",	{ 0.0,   15}},
 	{  0.000, "JupinvrRotateY",		{ 0.0, -180}},
 
-
-
 	{  4.000, "PixelShow",			{ 1.0, 4}},
 	{  4.000, "HarukaSlideIn",		{-4.0, 32}},
 	{ 32.000, "PixelShow",			{ 0.0, 4}},
@@ -1455,6 +1501,10 @@ local messageList = {
 	{108.000, "JupinvrRotateY",		{ 7.0,    0, 'linear'}},
 	{116.000, "JupinvrRotateY",		{ 7.0,   90, 'linear'}},
 	{124.000, "JupinvrRotateY",		{ 7.0,  180, 'linear'}},
+	{100.000, "JupinvrOrbital",		{ 7.0,  0.5, 'smooth'}},
+	{108.000, "JupinvrOrbital",		{ 7.0,    0, 'smooth'}},
+	{116.000, "JupinvrOrbital",		{ 7.0,  0.5, 'smooth'}},
+	{124.000, "JupinvrOrbital",		{ 7.0,    0, 'smooth'}},
 	{100.000, "JupinvrRingTilt",	{ 7.0,  -10}},
 	{108.000, "JupinvrRingTilt",	{ 7.0,   10}},
 	{116.000, "JupinvrRingTilt",	{ 7.0,  -20}},
@@ -1482,6 +1532,10 @@ local messageList = {
 	{204.000, "JupinvrRotateY",		{ 7.0,    0, 'linear'}},
 	{212.000, "JupinvrRotateY",		{ 7.0,  -90, 'linear'}},
 	{220.000, "JupinvrRotateY",		{ 7.0, -180, 'linear'}},
+	{196.000, "JupinvrOrbital",		{ 7.0, -0.5, 'smooth'}},
+	{204.000, "JupinvrOrbital",		{ 7.0,    0, 'smooth'}},
+	{212.000, "JupinvrOrbital",		{ 7.0, -0.5, 'smooth'}},
+	{220.000, "JupinvrOrbital",		{ 7.0,    0, 'smooth'}},
 	{196.000, "JupinvrRingTilt",	{ 7.0,  -15}},
 	{204.000, "JupinvrRingTilt",	{ 7.0,   15}},
 	{212.000, "JupinvrRingTilt",	{ 7.0,  -30}},
@@ -1659,8 +1713,19 @@ modsTable = {
 		
 		{   0.0,	"ScrollSpeed",			  1.0,    4.0,	3}, 
 		{   0.0,	"MaxScrollBPM",			  420,    4.0,	3}, 
-		{   0.0,	"Dark",					  0.2,    4.0,	3}, 
+		{   0.0,	"Dark",					  1.0,    0.0,	3}, 
 		{   0.0,	"Mini",				cyberMini,    4.0,	3}, 
+
+
+		{   4.0,	"Dark",					  0.0,   32.0,	3}, 
+		{  99.0,	"Mini",		cyberMininininini,    1.0,	3}, 
+
+		{ 130.5,	"Mini",				cyberMini,    1.5,	3}, 
+
+		{ 195.0,	"Mini",		cyberMininininini,    1.0,	3}, 
+
+		{ 220.0,	"Mini",				cyberMini,    8.0,	3}, 
+		{ 220.0,	"Dark",					  1.0,    8.0,	3}, 
 }
 
 
