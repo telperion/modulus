@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 --
---		DJ TECHNORCH vs. ARM(IOSYS) - "解熱鎮痛一撃必殺" (Fever and Pain Relief OHKO)
---		Bubble Tea Invitational 2.5
+--		GRATEC MOUR - "Satellite System ft. Diana Chiaki"
+--		Stepcharts Made Horribly 3
 --		
 --		Author: 	Telperion
 --		Date: 		2017-06-27
