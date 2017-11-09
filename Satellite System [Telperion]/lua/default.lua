@@ -14,10 +14,6 @@
 --		Reigned a queen named Diana.
 --
 -------------------------------------------------------------------------------
---
---		### EXTREMELY LOBOTOMIZED D3D-COMPATIBLE VERSION ###
---
--------------------------------------------------------------------------------
 
 local circumvention = false
 if circumvention then
@@ -41,8 +37,8 @@ local SQRT2 = math.sqrt(2.0)
 local DEG_TO_RAD = math.pi / 180.0
 
 
-local PlayerProxyInternals	= {nil, nil}
 local PlayerProxyActors 	= {nil, nil}
+local PlayerProxyTextures 	= {nil, nil}
 local PlayerProxySprites 	= {nil, nil}
 
 local nGhostSubjects = 5
@@ -623,8 +619,7 @@ function JupinvrUpdateFunction()
 			:xy(ss * xx - sw * 0.5, ss * yy - sh * 0.5)
 			:z(ss * zz)
 
-		-- D3D, you butt orifice
-		PlayerProxyActors[playerIndex]:zoom(1 - (1 - playerAlpha)*(1 - playerAlpha))
+		PlayerProxySprites[playerIndex]:diffusealpha(playerAlpha)
 	end
 
 end
@@ -819,43 +814,75 @@ local harukaTilt 	= 45	-- degrees
 local harukaL 		= 1024
 local harukaW 		= 720
 
-_FG_[#_FG_ + 1] = Def.ActorFrame {
-	OnCommand = function(self)
-		self:fov(70)
-			:vanishpoint(sw / 2, sh / 2)
+_FG_[#_FG_ + 1] = Def.ActorFrameTexture {
+	Name = "IntroBaseTexture",
+	InitCommand = function(self)
+		IntroBaseTexture = self
+
+		self:SetTextureName( self:GetName() )
+			:SetWidth( sw )
+			:SetHeight( sh )
+			:EnableAlphaBuffer( true )
+			:Create()
 	end,
 
 	Def.ActorFrame {
+		OnCommand = function(self)
+			self:fov(70)
+				:vanishpoint(sw / 2, sh / 2)
+		end,
+
 		Def.Sprite {
 			Name = "HarukaMukashii",
 			Texture = "satesyst-intro.png",
+			InitCommand = function(self)
+				self:x(sw / 2)
+					:y(sh + math.cos(harukaTilt * DEG_TO_RAD) * harukaL * 0.5)
+					:z(math.sin(harukaTilt * DEG_TO_RAD) * harukaL * 0.5)
+					:rotationx(-harukaTilt)
+					:diffuse(1.0, 1.0, 1.0, 1.0)
+			end,
 
-			PixelShowMessageCommand = function(self, args)
-				local alpha 	= args[1] and args[1] or 1.0
-				local tweenTime	= args[2] and args[2] or 1.0
+			HarukaSlideInMessageCommand = function(self, args)
+				local distance 	= args[1] and args[1] or -1.0
+				local tweenTime	= args[2] and args[2] or 16.0
 
-				self:decelerate(tweenTime / BPS)
-					:diffusealpha(alpha)
+				self:linear(tweenTime)
+					:addy(distance * harukaL * math.cos(harukaTilt * DEG_TO_RAD))
+					:addz(distance * harukaL * math.sin(harukaTilt * DEG_TO_RAD))
 			end,
 		},
+	},
+}
 
-		InitCommand = function(self)
-			self:x(sw / 2)
-				:y(sh + math.cos(harukaTilt * DEG_TO_RAD) * harukaL * 0.5)
-				:z(math.sin(harukaTilt * DEG_TO_RAD) * harukaL * 0.5)
-				:rotationx(-harukaTilt)
-				:diffuse(1.0, 1.0, 1.0, 1.0)
-		end,
+-- 
+-- Glitch 4
+--
+local PixelPrefetchNull 	= CalculateQuadsBaseVertices()
+local PixelPrefetchEngaged 	= CalculatePixelCenteredTextures(PixelPrefetchNull)
 
-		HarukaSlideInMessageCommand = function(self, args)
-			local distance 	= args[1] and args[1] or -1.0
-			local tweenTime	= args[2] and args[2] or 16.0
+_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
+	Name = "PixelAMV",
+	InitCommand = function(self)
+		self:xy(sw/2, sh/2)
+			:SetVertices(PixelPrefetchEngaged)
+			:SetDrawState{First = 1,
+						  Num = (pixelCols) * (pixelRows) * 4,
+						  Mode = "DrawMode_Quads"}
+			:diffusealpha(0.0)
+	end,
 
-			self:linear(tweenTime)
-				:addy(distance * harukaL * math.cos(harukaTilt * DEG_TO_RAD))
-				:addz(distance * harukaL * math.sin(harukaTilt * DEG_TO_RAD))
-		end,
-	}
+	OnCommand = function(self)
+		self:SetTexture( IntroBaseTexture:GetTexture() )
+	end,
+
+	PixelShowMessageCommand = function(self, args)
+		local alpha 	= args[1] and args[1] or 1.0
+		local tweenTime	= args[2] and args[2] or 1.0
+
+		self:decelerate(tweenTime / BPS)
+			:diffusealpha(alpha)
+	end,
 }
 
 --
@@ -1177,14 +1204,13 @@ _FG_[#_FG_ + 1] = Def.Actor {
 --
 for pn = 1,2 do
 	i = 1
-	_FG_[#_FG_ + 1] = Def.ActorFrame {	
-		Name = "ProxyP"..pn.."Outer",
+	_FG_[#_FG_ + 1] = Def.ActorFrameTexture {	
+		Name = "ProxyP"..pn.."Tex",
 		Def.ActorFrame {	
 			Name = "ProxyP"..pn.."Inner",
 			Def.ActorProxy {					
 				Name = "ProxyP"..pn,
 				InitCommand = function(self)
-					PlayerProxyInternals[pn] = self
 					self:aux( Whomst(self) )
 				end,
 				BeginCommand=function(self)
@@ -1223,14 +1249,37 @@ for pn = 1,2 do
 			end,
 		},
 		InitCommand = function(self)
-			PlayerProxySprites[pn] = self
-			ghostSubjects[pn] = self
+--			self:aux( Whichst(self) )
+			PlayerProxyTextures[pn] = self
+			self:SetTextureName( self:GetName() )
+				:SetWidth( sw )
+				:SetHeight( sh )
+				:EnableAlphaBuffer( true )
+				:Create()
 		end,
 		OnCommand = function(self)
 			self:xy(0, 0)
+				:z(1)
+		end,
+	}
+
+	_FG_[#_FG_ + 1] = Def.Sprite {
+		Name = "ProxyP"..pn.."Outer",
+		InitCommand = function(self)
+			PlayerProxySprites[pn] = self
+			ghostSubjects[pn] = self
+
+			self:xy(sw / 2, sh / 2)
 				:z(0.1)
 				:diffuse(1.0, 1.0, 1.0, 1.0)
 		end,
+
+		BeginCommand = function(self)
+			if PlayerProxyTextures[pn] then
+				self:SetTexture( PlayerProxyTextures[pn]:GetTexture() )
+			end
+		end,
+
 	}
 end
 
@@ -1436,9 +1485,9 @@ local ghostDude =
 		end,
 	}
 	
-_DZ_[#_DZ_ + 1] = aftMemory
-_DZ_[#_DZ_ + 1] = aftOutput
-_DZ_[#_DZ_ + 1] = ghostDude
+_FG_[#_FG_ + 1] = aftMemory
+_FG_[#_FG_ + 1] = aftOutput
+_FG_[#_FG_ + 1] = ghostDude
 
 --
 --		Some ghosting!
