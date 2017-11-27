@@ -1,0 +1,163 @@
+[009:24] [013:00] [A:ENTRY] 
+
+// pose: neutral
+[015:00] [015:00] [A:OPEN, 3L, SS]
+[017:00] [019:00] [A:ADD] A delicious wine
+[020:00] [023:00] [A:ADD] for the beautiful lady...
+
+[026:00] [026:24] [A:NL, ADD] And
+[030:24] [041:00] [A:ADD] this castle just fell into my hands.
+
+[051:00] [063:00] [A:NL, ADD] I wish the whole country could fall to me so easily...
+
+[067:00] [075:00] [A:CLOSE]
+
+
+[080:00] [080:24] [B:OPEN, 1L] (Soldier's voice, offscreen)
+[080:24] [083:00] [B:ADD] We're under attack!
+[093:00] [095:00] [B:CLOSE]
+
+// pose: listening
+[084:00] [085:00] [A:OPEN, 1L]
+[085:00] [088:00] [A:ADD] What!
+[088:00] [093:00] [A:CLEAR, ADD] Under attack!
+[093:00] [097:00] [A:CLEAR, ADD] But we're inside the castle!
+[098:00] [099:00] [A:CLOSE]
+
+[099:00] [100:00] [A:OPEN, 2L]
+[100:00] [102:00] [A:ADD] The palace guard -- 
+[104:00] [109:00] [A:NL, ADD] what is Dian Wei doing!
+[111:00] [113:00] [A:CLOSE]
+
+[114:00] [115:00] [A:OPEN, 2L]
+[115:00] [116:00] [A:CLEAR, ADD] Confront them!
+[119:00] [123:00] [A:NL, ADD] What's happening!
+[125:00] [127:00] [A:CLOSE]
+
+[127:00] [136:00] [B:OPEN, 2L] // (Soldier's voice, offscreen)
+// labored breathing changes speech bubble approach?
+[136:24] [138:00] [B:ADD] From the rear!
+[140:00] [145:00] [B:CLEAR, ADD] Zhang Xiu has betrayed us!!
+[149:00] [151:00] [B:CLOSE]
+
+// pose: terrified
+[146:00] [147:00] [A:OPEN, 1L]
+[147:24] [149:24] [A:ADD, VIBRATE] Oh my god...
+[151:00] [151:00] [A:CLOSE]
+
+
+[155:00] [156:00] [FIREWORK] 宛城
+[156:24] [157:24] [FIREWORK] 炎上
+[159:00] [160:00] // stop vibrating
+[160:00] [163:00] // disappear
+
+ // bouncy castle interlude
+[163:00] [227:00] [WANCHENG]
+
+// pose: terrified
+[227:00] [228:00] [A:OPEN, 1L]
+[228:00] [231:00] [A:ADD] Put out the fire!
+[233:00] [236:00] [A:CLEAR, ADD] How many troops have they brought?
+[238:00] [241:00] [A:ADD] I have no idea!
+
+[243:24] [247:00] [A:CLEAR, ADD] Why isn't Dian Wei here!
+
+[250:24] [257:00] [A:CLEAR, ADD, VIBRATE] ...how are we already this helpless?!...
+
+[258:00] [259:00] [A:CLOSE]
+
+
+ // bouncy castle interlude
+[259:00] [260:00] [FIREWORK] 宛城
+[260:00] [261:00] [FIREWORK] 炎上
+[261:00] [262:00] [FIREWORK] 宛城
+[262:00] [263:00] [FIREWORK] 炎上
+[263:00] [264:00] [FIREWORK] 宛城
+[264:00] [265:00] [FIREWORK] 炎上
+[265:00] [266:00] [FIREWORK] 宛城
+[266:00] [266:24] // stop vibrating
+[266:24] [267:00] // disappear
+
+[267:00] [268:00] [FIREWORK] 宛城
+[268:00] [269:00] [FIREWORK] 炎上
+[269:00] [270:00] [FIREWORK] 宛城
+[270:00] [271:00] [FIREWORK] 炎上
+[271:00] [272:00] [FIREWORK] 宛
+[272:00] [273:00] [FIREWORK] 城
+[273:00] [274:00] [FIREWORK] 不幸
+[274:00] [275:00] [FIREWORK] 炎上
+
+[275:00] [276:00] [FIREWORK] 炎上
+[276:00] [277:00] [FIREWORK] 宛城
+[277:00] [278:00] [FIREWORK] 炎上
+[278:00] [279:00] [FIREWORK] 宛城
+[279:00] [280:00] [FIREWORK] 炎上
+[280:00] [281:00] [FIREWORK] 宛城
+[281:00] [282:00] [FIREWORK] 炎上
+[282:00] [282:24] // stop vibrating
+[282:24] [283:00] // disappear
+
+[283:00] [284:00] [FIREWORK] 宛城
+[284:00] [285:00] [FIREWORK] 炎上
+[285:00] [286:00] [FIREWORK] 宛城
+[286:00] [287:00] [FIREWORK] 炎上
+[288:00] [289:00] // stop vibrating
+[289:00] [291:00] // disappear
+
+ // bouncy castle interlude
+[291:00] [323:00] [WANCHENG]
+
+
+// pose: distraught
+[323:00] [327:00] [A:OPEN, 2L]
+[327:00] [329:00] [A:ADD] Dian Wei dead...
+[331:00] [339:00] [A:ADD] my own child, Zixiu, also dead...
+[343:00] [346:00] [A:NL, ADD] God forbid...
+[348:00] [353:00] [A:ADD] is this where it all ends?...
+[355:00] [355:00] [A:CLOSE]
+
+// pose: anger
+[369:00] [371:00] [A:OPEN, 1L]
+[371:16] [371:16] [A:ADD] NO!
+[377:00] [379:00] [A:OPEN, 1L]
+[379:00] [384:00] [A:CLEAR, ADD] No way am I dying here! Not here, not now!
+
+[387:00] [389:24] [A:CLEAR, ADD] Anything!
+[395:00] [397:24] [A:ADD] Anything!
+[403:00] [405:24] [A:ADD] I'll do anything!
+[409:00] [411:00] [A:CLOSE]
+
+// BPM change
+[413:00] [415:00] [A:OPEN, 1L]
+[415:00] [420:00] [A:ADD] I must survive this!!
+[421:00] [423:00] [A:CLOSE]
+
+
+// pose: terrified
+[425:00] [425:00] [A:OPEN, 1L]
+[425:00] [425:00] [A:ADD] Retreat!!
+[430:00] [430:00] [A:CLOSE]
+
+[432:00] [439:00] [A:CLEAR, ADD] Out of my way! Coming through!
+
+[443:24] [450:00] [A:CLEAR, ADD] Don't just stand there!
+
+[458:00] [460:00] [A:CLEAR, ADD] Look out!
+[464:00] [467:00] [A:ADD] Keep moving!
+[470:24] [479:00] [A:CLEAR, ADD] We are number one!
+
+[488:00] [488:00] [A:CLEAR, ADD] AHHHHHHHHH!!!
+[491:24] [491:24] [A:CLEAR, ADD] I'm gonna die!
+[499:24] [499:24] [A:CLEAR, ADD] Impossible!
+
+// pose: distraught?
+[511:00] [516:00] [A:CLEAR, ADD] Will this be the end of me?!
+
+[521:00] [521:00] [A:CLOSE]
+
+// pose: listening
+[530:00] [531:00] [A:OPEN, 1L]
+[531:00] [532:00] [A:ADD] ...huh? 
+// pose: neutral
+[533:00] [534:00] [A:ADD] ...I'm alive??
+[541:00] [545:00] [A:CLOSE]
