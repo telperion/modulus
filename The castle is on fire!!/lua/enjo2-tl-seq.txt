@@ -1,3 +1,5 @@
+[OFFSET: 1]
+
 [009:24] [013:00] [A:ENTRY] 
 
 // pose: neutral
