@@ -1,4 +1,7 @@
 [OFFSET: 1]
+[DEFAULT_ANIMATION: HOP]
+[DEFAULT_POSITION: SS]
+[DEFAULT_LINE_HEIGHT: 1]
 
 [009:24] [013:00] [A:ENTRY] 
 
@@ -15,7 +18,7 @@
 [067:00] [075:00] [A:CLOSE]
 
 
-[080:00] [080:24] [B:OPEN, 1L] (Soldier's voice, offscreen)
+[080:00] [080:24] [B:OPEN, 1L, NN] (Soldier's voice, offscreen)
 [080:24] [083:00] [B:ADD] We're under attack!
 [093:00] [095:00] [B:CLOSE]
 
