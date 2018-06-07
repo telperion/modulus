@@ -16,7 +16,6 @@
 --			-- [5]: player application (1 = P1, 2 = P2, 3 = both, 0 = neither)
 --		};
 --		local modsLeadBy = 0.009;
---		_FG_[#_FG_ + 1] = LoadActor("./modsHQ.lua", {modsTable, modsLeadBy})
 --
 -------------------------------------------------------------------------------
 
@@ -192,7 +191,7 @@ modsHQ[#modsHQ + 1] = Def.Quad {
 				
 				if overtime + modsLeadBy >= nextMod[1] then
 					-- TODO: this assumes the effect applies over a constant BPM section!!
---					Trace('>>> modsHQ: ' .. modsLaunched .. ' @ time = ' .. overtime);
+					Trace('>>> modsHQ: ' .. modsLaunched .. ' @ time = ' .. overtime);
 					
 					for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 						pn = tonumber(string.match(pe, "[0-9]+"));
@@ -209,8 +208,8 @@ modsHQ[#modsHQ + 1] = Def.Quad {
 								newApproach = math.abs(nextMod[3] - opVal) * BPS / (nextMod[4] + 0.001);
 							end
 												pops[ nextMod[2] ]( pops, nextMod[3], newApproach );
---							Trace('>>> modsHQ: ' .. opVal      .. ' @ rate = ' .. opApproach  .. ' for ' .. pe);
---							Trace('>>> modsHQ: ' .. nextMod[3] .. ' @ rate = ' .. newApproach .. ' for ' .. pe .. ' [New!]');
+							Trace('>>> modsHQ: ' .. opVal      .. ' @ rate = ' .. opApproach  .. ' for ' .. pe);
+							Trace('>>> modsHQ: ' .. nextMod[3] .. ' @ rate = ' .. newApproach .. ' for ' .. pe .. ' [New!]');
 						end
 					end
 					
