@@ -180,16 +180,132 @@ end
 
 -------------------------------------------------------------------------------
 --
---		Some ghosting!
+--		Some trees
 --
 
+function CalculateBaseVertices_Tree()
+	-- use disjoint triangles for simplicity
+
+	verts = {
+		{{-0.25, 0.25, 0}, {0,   1,   0,   1.0}},
+		{{ 0.25, 0.25, 0}, {0.2, 1,   0,   1.0}},
+		{{ 0,    1,    0}, {0,   1,   0.2, 1.0}},
+		{{-0.10, 0,    0}, {0.3, 0.1, 0,   1.0}},
+		{{ 0.10, 0,    0}, {0.3, 0.1, 0,   1.0}},
+		{{ 0.10, 0.25, 0}, {0.3, 0.1, 0,   1.0}},
+		{{ 0.10, 0.25, 0}, {0.3, 0.2, 0,   1.0}},
+		{{-0.10, 0.25, 0}, {0.3, 0.2, 0,   1.0}},
+		{{-0.10, 0,    0}, {0.3, 0.2, 0,   1.0}},
+	}
+
+
+	-- texcoords (in case we need them)
+	for i = 1,3 do
+		verts[i][3] = {(verts[i][1][1] + 0.25) / 0.50, (verts[i][1][2] - 0.25) / 0.75}
+	end
+	for i = 4,9 do
+		verts[i][3] = {(verts[i][1][1] + 0.10) / 0.20, (verts[i][1][2] - 0)    / 0.25}
+	end
+
+	return verts
+end
+
+
+local treePlace = {sw, sh, 100 * math.sqrt(sw, sh)}
+local treeSize = {60, 60, 1}
+local treeColorVariation = 0.1
+local coefValley = 10
+local nTrees = 2000
+local trees = {}
+local treesFrame = nil
+local treesAF = Def.ActorFrame {
+	InitCommand = function(self)
+		self:xy(sw * 0.5, sh * 1.2)
+			:rotationx(15)
+
+		treesFrame = self
+	end,
+	BeginCommand = function(self)
+	end,
+	OnCommand = function(self)
+		self:fov(45)
+			:SetDrawByZPosition(true)
+	end,	
+}
+for i = 1,nTrees do
+	local treeIndex = i
+	treesAF[#treesAF + 1] = Def.ActorMultiVertex {
+		InitCommand = function(self)
+			local verts = CalculateBaseVertices_Tree()
+
+			-- ln(abs([s-1]*t) + 1)/ln(s)
+			local vx = math.random() * 2.0 - 1.0
+			local vz = math.random() * 2.0 - 1.0
+			local vy = math.log(math.abs((coefValley-1)*vx) + 1) / math.log(coefValley)
+
+			for vi = 1,#verts do
+				for vci = 1,3 do
+					verts[vi][2][vci] = RangeClamp(verts[vi][2][vci] + (math.random() - 0.5) * treeColorVariation, 0.0, 1.0)
+				end
+			end
+
+			self:aux(treeIndex)
+				:xy(vx * treePlace[1], vy * -treePlace[2])
+				:z(vz * treePlace[3])
+				:SetVertices(verts)
+				:SetDrawState{First = 1,
+							  Num = 9,
+							  Mode = "DrawMode_Triangles"}
+				:zoomx(treeSize[1])
+				:zoomy(-treeSize[2])						-- THEY'RE ALL UPSID'E DOW'N LOL
+				:zoomz(treeSize[3])
+				:diffusealpha(RangeClamp((1.0 - vz) * 2.0, 0.0, 1.0))
+
+			trees[#trees + 1] = self
+		end,
+	}
+end
+
+_FG_[#_FG_ + 1] = treesAF
+
 --
---		Some ghosting!
+--		Some trees
 --
 -------------------------------------------------------------------------------
 
 
+-------------------------------------------------------------------------------
+--
+--		gfx update function
+--
 
+vt_last = nil
+function gfxUpdateFunction()
+	-- Most things are determined by beat, believe it or not.		
+	local vt = GAMESTATE:GetSongBeat() + visualOffset
+
+	if not vt_last then
+		vt_last = vt
+	end
+		
+	-- TODO: this assumes the effect applies over a constant BPM section!!
+	BPS = GAMESTATE:GetSongBPS()
+
+	if treesFrame then
+		treesFrame:rotationx(math.sin(vt * PI / 12.0) * 5.0 + 15.0)
+		for ti = 1,#trees do
+			if trees[ti] then
+				-- idk, whatever!!
+			end
+		end
+	end
+
+end
+
+--
+--		gfx update function
+--
+-------------------------------------------------------------------------------
 
 
 
