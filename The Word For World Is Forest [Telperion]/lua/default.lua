@@ -279,7 +279,7 @@ for i = 1,nTrees do
 				:zoomz( treeSize[3])
 				:diffusealpha(math.sqrt(RangeScale(vz, -treeZExtend, 1.0, 1.0, 0.5)))
 
-			trees[#trees + 1] = self
+			trees[#trees + 1] = {self, vx, vy, vz}
 		end,
 	}
 end
@@ -342,7 +342,7 @@ for i = 1,nHillSdv do
 				:zoomy(-1)	-- THEY'RE ALL UPSID'E DOW'N LOL
 				:diffusealpha(math.sqrt(RangeScale(hillIndex, 0.0, nHillSdv, 1.0, 0.8)))
 
-			hills[#hills + 1] = self
+			hills[#hills + 1] = {self, vzB}
 		end,
 	}
 end
@@ -436,16 +436,28 @@ function gfxUpdateFunction()
 	-- TODO: this assumes the effect applies over a constant BPM section!!
 	BPS = GAMESTATE:GetSongBPS()
 
+	local ppz = 1.0 + treeZExtend
 	if treesFrame then
 		treesFrame:rotationx(math.sin(vt * PI / 13.0) * 5.0 + 15.0)
 				  :rotationy(math.sin(vt * PI / 17.0) * 10.0 + 0.0)
 		for ti = 1,#trees do
-			if trees[ti] then
-				-- idk, whatever!!
+			if trees[ti][1] then
+				local vx = trees[ti][2]
+				local vy = trees[ti][3]
+				local vz = 1.0 - math.fmod(vt / 8.0 - trees[ti][4] - treeZExtend + ppz, ppz)
+				trees[ti][1]:xy(vx * treePlace[1], vy * -treePlace[2])
+							:z(vz * treePlace[3])
+			end
+		end
+		for hi = 1,#hills do
+			if hills[hi][1] then
+				local vz = 1.0 - math.fmod(vt / 8.0 - hills[hi][2] - treeZExtend + ppz, ppz)
+				hills[hi][1]:z(vz * treePlace[3])
 			end
 		end
 	end
 
+	vt_last = vt
 end
 
 --
