@@ -211,12 +211,24 @@ function CalculateBaseVertices_Tree()
 end
 
 
-local treePlace = {sw, sh, 100 * math.sqrt(sw, sh)}
+local coefValley = 5
+function Hillside(vx)
+	return math.log(math.abs((coefValley-1)*vx) + 1) / math.log(coefValley)
+end
+
+
+local treePlace = {0.5 * sw, 0.4 * sh, -30 * math.sqrt(sw, sh)}
+local treeZExtend = 0.5
 local treeSize = {60, 60, 1}
 local treeColorVariation = 0.1
-local coefValley = 10
-local nTrees = 2000
+local nTrees = 1000
+local nHillSdv = 20
+local nBPCorner = 12
+local bpRadCurve = 0.2
+local altitude = 1.5
 local trees = {}
+local hills = {}
+local backplate = nil
 local treesFrame = nil
 local treesAF = Def.ActorFrame {
 	InitCommand = function(self)
@@ -239,14 +251,20 @@ for i = 1,nTrees do
 			local verts = CalculateBaseVertices_Tree()
 
 			-- ln(abs([s-1]*t) + 1)/ln(s)
-			local vx = math.random() * 2.0 - 1.0
-			local vz = math.random() * 2.0 - 1.0
-			local vy = math.log(math.abs((coefValley-1)*vx) + 1) / math.log(coefValley)
+			local vx = math.random() *  2.0                - 1.0
+			--	  vx = math.sin(vx * PI / 2.0)
+			local vz = math.random() * (1.0 + treeZExtend) - treeZExtend
+			local vy = Hillside(vx)
+			local hh = RangeScale(math.random(), 0.0, 1.0, 0.5, 1.5)
 
-			for vi = 1,#verts do
-				for vci = 1,3 do
-					verts[vi][2][vci] = RangeClamp(verts[vi][2][vci] + (math.random() - 0.5) * treeColorVariation, 0.0, 1.0)
-				end
+			local treeColor = HSV2RGB({
+					RangeScale(math.random(), 0.0, 1.0,  90.0, 150.0),
+					1.0,
+					RangeScale(math.random(), 0.0, 1.0,   0.3,   0.6),
+					1.0
+				})
+			for vi = 1,3 do
+				verts[vi][2] = treeColor
 			end
 
 			self:aux(treeIndex)
@@ -256,12 +274,139 @@ for i = 1,nTrees do
 				:SetDrawState{First = 1,
 							  Num = 9,
 							  Mode = "DrawMode_Triangles"}
-				:zoomx(treeSize[1])
-				:zoomy(-treeSize[2])						-- THEY'RE ALL UPSID'E DOW'N LOL
-				:zoomz(treeSize[3])
-				:diffusealpha(RangeClamp((1.0 - vz) * 2.0, 0.0, 1.0))
+				:zoomx( treeSize[1] * hh)
+				:zoomy(-treeSize[2] * hh)	-- THEY'RE ALL UPSID'E DOW'N LOL
+				:zoomz( treeSize[3])
+				:diffusealpha(math.sqrt(RangeScale(vz, -treeZExtend, 1.0, 1.0, 0.5)))
 
 			trees[#trees + 1] = self
+		end,
+	}
+end
+for i = 1,nHillSdv do
+	local hillIndex = i
+	
+	local verts = {}
+	--
+	-- Assume valley floor is square res for now.
+	--
+	-- 1--3--5--7--
+	-- |  |  |  |
+	-- 2--4--6--8--
+	--
+	local vzA = (1.0 + treeZExtend) * (hillIndex-1)/nHillSdv - treeZExtend
+	local vzB = (1.0 + treeZExtend) *  hillIndex   /nHillSdv - treeZExtend
+	for vi = 0,nHillSdv do
+		-- Specify pairs of vertices.
+		local vx  = 2*        vi   /nHillSdv - 1
+		local vy  = Hillside(vx)
+		verts[#verts + 1] = {
+			{
+				vx  * treePlace[1],
+				vy  * treePlace[2],
+				0
+			},
+			HSV2RGB({
+				RangeScale(math.random(), 0.0, 1.0, 330.0, 390.0),
+				RangeScale(math.random(), 0.0, 1.0,   0.2,   0.6),
+				RangeScale(math.random(), 0.0, 1.0,   0.1,   0.2),
+				1.0
+			}),
+			{vx*0.5+0.5, vzA*0.5+0.5}		-- this could be arclength defined but I ain't about that life
+			}
+		verts[#verts + 1] = {
+			{
+				vx  * treePlace[1],
+				vy  * treePlace[2],
+				(vzA-vzB) * treePlace[3]
+			},
+			HSV2RGB({
+				RangeScale(math.random(), 0.0, 1.0, 330.0, 390.0),
+				RangeScale(math.random(), 0.0, 1.0,   0.2,   0.6),
+				RangeScale(math.random(), 0.0, 1.0,   0.1,   0.2),
+				1.0
+			}),
+			{vx*0.5+0.5, vzA*0.5+0.5}		-- this could be arclength defined but I ain't about that life
+			}
+	end
+
+	treesAF[#treesAF + 1] = Def.ActorMultiVertex {
+		InitCommand = function(self)
+
+			self:aux(hillIndex)				
+				:z(vzB * treePlace[3])		-- trying to force draw by Z order to cooperate
+				:SetVertices(verts)
+				:SetDrawState{First = 1,
+							  Num = -1,
+							  Mode = "DrawMode_QuadStrip"}
+				:zoomy(-1)	-- THEY'RE ALL UPSID'E DOW'N LOL
+				:diffusealpha(math.sqrt(RangeScale(hillIndex, 0.0, nHillSdv, 1.0, 0.8)))
+
+			hills[#hills + 1] = self
+		end,
+	}
+end
+
+for i=1,1 do
+	local verts = {}
+
+	--
+	--
+	--	/¯¯¯\
+	--	|   |
+	--	|   |
+	--
+	verts[#verts + 1] = {{
+		-treePlace[1], 
+		treePlace[2] * Hillside(-1), 
+		0
+		}}
+	for vi = 0,nBPCorner do
+		local vth = RangeScale(vi, 0, nBPCorner, 0, PI/2)
+		local vx = math.cos(vth)
+		local vy = math.sin(vth)
+		verts[#verts + 1] = {{
+			-treePlace[1] + bpRadCurve * treePlace[1] * (1 - vx),
+			treePlace[2]*(1+altitude)  - bpRadCurve * treePlace[1] * (1 - vy),
+			0
+			}}
+	end
+	for vi = 0,nBPCorner do
+		local vth = RangeScale(vi, 0, nBPCorner, PI/2, 0)
+		local vx = math.cos(vth)
+		local vy = math.sin(vth)
+		verts[#verts + 1] = {{
+			treePlace[1] - bpRadCurve * treePlace[1] * (1 - vx),
+			treePlace[2]*(1+altitude) - bpRadCurve * treePlace[1] * (1 - vy),
+			0
+			}}
+	end
+	verts[#verts + 1] = {{
+		treePlace[1], 
+		treePlace[2] * Hillside(1), 
+		0
+		}}
+
+
+	for vi = 1,#verts do
+		verts[vi][2] = HSV2RGB({RangeScale(vi, 1, #verts, 90, 150), 1.0, 0.5, 1.0})		
+	end
+
+
+	treesAF[#treesAF + 1] = Def.ActorMultiVertex {
+		InitCommand = function(self)
+
+			self:aux(0)				
+				:z(treePlace[3])		-- trying to force draw by Z order to cooperate
+				:SetLineWidth(12)
+				:SetVertices(verts)
+				:SetDrawState{First = 1,
+							  Num = -1,
+							  Mode = "DrawMode_LineStrip"}
+				:zoomy(-1)	-- THEY'RE ALL UPSID'E DOW'N LOL
+				:diffusealpha(0.5)
+
+			backplate = self
 		end,
 	}
 end
@@ -292,7 +437,8 @@ function gfxUpdateFunction()
 	BPS = GAMESTATE:GetSongBPS()
 
 	if treesFrame then
-		treesFrame:rotationx(math.sin(vt * PI / 12.0) * 5.0 + 15.0)
+		treesFrame:rotationx(math.sin(vt * PI / 13.0) * 5.0 + 15.0)
+				  :rotationy(math.sin(vt * PI / 17.0) * 10.0 + 0.0)
 		for ti = 1,#trees do
 			if trees[ti] then
 				-- idk, whatever!!
