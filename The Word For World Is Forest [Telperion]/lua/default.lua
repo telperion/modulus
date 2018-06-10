@@ -221,7 +221,7 @@ local treePlace = {0.5 * sw, 0.4 * sh, -30 * math.sqrt(sw, sh)}
 local treeZExtend = 0.5
 local treeSize = {60, 60, 1}
 local treeColorVariation = 0.1
-local nTrees = 1000
+local nTrees = 500
 local nHillSdv = 20
 local nBPCorner = 12
 local bpRadCurve = 0.2
@@ -340,7 +340,6 @@ for i = 1,nHillSdv do
 							  Num = -1,
 							  Mode = "DrawMode_QuadStrip"}
 				:zoomy(-1)	-- THEY'RE ALL UPSID'E DOW'N LOL
-				:diffusealpha(math.sqrt(RangeScale(hillIndex, 0.0, nHillSdv, 1.0, 0.8)))
 
 			hills[#hills + 1] = {self, vzB}
 		end,
@@ -419,6 +418,59 @@ _FG_[#_FG_ + 1] = treesAF
 -------------------------------------------------------------------------------
 
 
+
+-------------------------------------------------------------------------------
+--
+--		Some arrow paths
+--
+
+local pathAF = Def.ActorFrame {
+	InitCommand = function(self)
+	end,
+	OnCommand = function(self)
+	end,
+}
+
+local pathActors = {}
+for pn = 1,2 do
+	pathActors[pn] = {}
+	for lane = 1,4 do
+		local pnL = pn
+		local lnL = lane
+		pathAF[#pathAF + 1] = Def.ActorMultiVertex
+		{
+			Name = "PathLaneP"..pnL.."_"..lnL,
+			InitCommand = function(self)
+				pathActors[pn][lane] = {self, nil}
+			end,
+			OnCommand = function(self)
+				if plr[pnL] then
+					self:xy(plr[pnL]:GetX(), plr[pnL]:GetY())
+
+					local nf = plr[pnL]:GetChild('NoteField')
+					local colActors = nf:GetColumnActors()
+					local splHandle = colActors[lnL]:GetPosHandler()
+					local splObject = splHandle:GetSpline()
+					pathActors[pn][lane] = {self, splObject}
+
+					self:SetLineWidth(3)					
+						:SetDrawState{First = 1,
+									  Num = 0,
+									  Mode = "DrawMode_LineStrip"}
+				end
+			end,
+		}
+	end
+end
+
+_FG_[#_FG_ + 1] = pathAF
+
+--
+--		Some arrow paths
+--
+-------------------------------------------------------------------------------
+
+
 -------------------------------------------------------------------------------
 --
 --		gfx update function
@@ -447,12 +499,60 @@ function gfxUpdateFunction()
 				local vz = 1.0 - math.fmod(vt / 8.0 - trees[ti][4] - treeZExtend + ppz, ppz)
 				trees[ti][1]:xy(vx * treePlace[1], vy * -treePlace[2])
 							:z(vz * treePlace[3])
+							:diffusealpha(math.sqrt(RangeScale(vz, -treeZExtend, 1.0, 1.0, 0.5)))
 			end
 		end
 		for hi = 1,#hills do
 			if hills[hi][1] then
 				local vz = 1.0 - math.fmod(vt / 8.0 - hills[hi][2] - treeZExtend + ppz, ppz)
 				hills[hi][1]:z(vz * treePlace[3])
+			end
+		end
+		for pn = 1,2 do
+			for lane = 1,4 do
+				if pathActors[pn][lane] then
+					local pact = pathActors[pn][lane][1]
+					local psta = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn)
+					local maxT = 480.0
+					local stepT = 16.0
+
+					if psta then 
+						local verts = {}
+						for t = 0,maxT,stepT do
+							local px = ArrowEffects.GetXPos(psta, lane, t)
+							local py = ArrowEffects.GetYPos(psta, lane, t)
+							local pz = ArrowEffects.GetZPos(psta, lane, t)
+							verts[#verts+1] = {
+								{px, py, pz},
+								HSV2RGB({90*(t/maxT + lane - 1) + 45*pn, 1.0, 0.5, 1.0})
+							}
+							Trace('### t = '..t..', px = '..px..', py = '..py..', pz = '..pz)
+						end
+						pact:SetLineWidth(6)
+							:SetVertices(verts)
+							:SetDrawState{First = 1,
+										  Num = -1,
+										  Mode = "DrawMode_LineStrip"}
+					end
+
+--					if pathActors[pn][lane][2] then
+--						local spl = pathActors[pn][lane][2]
+--
+--						local verts = {}
+--						local maxT = spl:GetMaxT()
+--						Trace('### maxT = '..maxT..', spl = '..spl:GetDimension()..'D '..spl:GetSize()..'-pt')
+--						for t = 0,0.1,maxT do
+--							verts[#verts+1] = {
+--								spl:Evaluate(t),
+--								HSV2RGB({90*(t/maxT + lane - 1), 1.0, 0.5, 1.0})
+--							}
+--						end
+--						pact:SetVertices(verts)
+--							:SetDrawState{First = 1,
+--										  Num = -1,
+--										  Mode = "DrawMode_LineStrip"}
+--					end
+				end
 			end
 		end
 	end
@@ -624,6 +724,10 @@ modsTable = {
 		
 		{   0.0,	"ScrollSpeed",	niceSpeed,    8.0,	3}, 
 		{   0.0,	"Dark",				  0.8,    8.0,	3}, 
+		{   0.0,	"Tipsy",			  1.0,    8.0,	3},  
+		{   0.0,	"Drunk",			  0.5,    8.0,	3},
+		{   0.0,	"Beat",				  2.0,    8.0,	2}, 
+		{   0.0,	"Tornado",			  0.5,    8.0,	1}, 
 }
 _FG_[#_FG_ + 1] = LoadActor("./modsHQ.lua", {modsTable, 0})
 Trace('### Forest: Loaded mods HQ')
