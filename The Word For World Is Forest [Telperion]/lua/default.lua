@@ -20,6 +20,7 @@ if circumvention then
 	return Def.ActorFrame {}
 end
 
+local niceSpeed = (420 + 69) / 150			-- This song is 150 BPM.
 local sw = SCREEN_WIDTH
 local sh = SCREEN_HEIGHT
 local BPS = GAMESTATE:GetSongBPS()
@@ -75,8 +76,22 @@ Trace('### Forest: Loaded Helpers')
 -- 		Playfield proxies
 --
 
+local PlayerProxyActors = {}
+local PlayerFullFrames = {}
+local PlayerTreeView = nil
+
+local playerFullAF = {}
+local playerValleyAF = Def.ActorFrame {
+	InitCommand = function(self)
+		PlayerTreeView = self
+		self:xy(0.5 * sw, 1.0 * sh)
+	end,
+	OnCommand = function(self)
+	end,
+}
+
 for pn = 1,2 do
-	_FG_[#_FG_ + 1] = Def.ActorFrame {	
+	playerFullAF[pn] = Def.ActorFrame {	
 		Name = "ProxyP"..pn.."Outer",
 		Def.ActorFrame {	
 			Name = "ProxyP"..pn.."Inner",
@@ -96,8 +111,10 @@ for pn = 1,2 do
 				OnCommand=function(self)
 					local McCoy = SCREENMAN:GetTopScreen():GetChild('PlayerP'..self:getaux())
 					if McCoy then 
-						self:xy(-McCoy:GetX(), -McCoy:GetY())
-						self:GetParent():xy(McCoy:GetX(), McCoy:GetY())
+--						self:xy(0, 0)	-- TODO: what Y value!!
+						self:xy(-McCoy:GetX(), -McCoy:GetY())	-- TODO: what Y value!!
+--						self:GetParent():xy(McCoy:GetX(), McCoy:GetY())
+						Trace("Player "..self:getaux()..": x = "..McCoy:GetX()..", y = "..McCoy:GetY())
 						Trace("Player "..self:getaux().." Proxy centered itself!")
 					else
 						Trace("Player "..self:getaux().." Proxy couldn't center itself!")
@@ -106,25 +123,34 @@ for pn = 1,2 do
 				RecenterProxyMessageCommand=function(self)					
 					local McCoy = SCREENMAN:GetTopScreen():GetChild('PlayerP'..self:getaux())
 					if McCoy then 
-						self:xy(-McCoy:GetX(), -McCoy:GetY())
-						self:GetParent():xy(McCoy:GetX(), McCoy:GetY())
+--						self:xy(0, 0)	-- TODO: what Y value!!
+						self:xy(-McCoy:GetX(), -McCoy:GetY())	-- TODO: what Y value!!
+--						self:GetParent():xy(McCoy:GetX(), McCoy:GetY())
+						Trace("Player "..self:getaux()..": x = "..McCoy:GetX()..", y = "..McCoy:GetY())
+						Trace("Player "..self:getaux().." Proxy recentered itself!")
 					end
 				end,
 			},
 			InitCommand = function(self)
+				PlayerProxyActors[pn] = self
+				self:xy(0, 0)
 --				self:aux( tonumber(string.match(self:GetName(), "_([0-9]+)")) )
 			end,
 			CenterProxiesMessageCommand = function(self)
-				self:decelerate(8.0 / BPS):xy(sw/2, sh/2-60)
+--				self:decelerate(8.0 / BPS):xy(sw/2, sh/2)
 			end,
 		},
 		InitCommand = function(self)
+			PlayerFullFrames[pn] = self
 --			self:aux( tonumber(string.match(self:GetName(), "_([0-9]+)")) )
+			self:xy(0, 0)
 		end,
 		OnCommand = function(self)
-			self:z(2)
+			self:fov(45)
+				:SetDrawByZPosition(true)
 		end,
 	}
+	playerValleyAF[#playerValleyAF + 1] = playerFullAF[pn]
 end
 
 --
@@ -146,12 +172,8 @@ for pn = 1,2 do
 				self:hibernate(1573)
 			end
 		end,
-		OnCommand = function(self)
-			local p = self:GetParent()
-						  :GetChild('ProxyP'..self:getaux().."Outer")
-						  :GetChild('ProxyP'..self:getaux().."Inner")
-			
-			self:xy(p:GetX(), sh/2)
+		OnCommand = function(self)			
+			self:xy(sw * (0.1 + 0.8 * (self:getaux() - 1)), sh/2)
 				:zoom(0.8)
 		end,
 	}
@@ -424,20 +446,14 @@ _FG_[#_FG_ + 1] = treesAF
 --		Some arrow paths
 --
 
-local pathAF = Def.ActorFrame {
-	InitCommand = function(self)
-	end,
-	OnCommand = function(self)
-	end,
-}
-
 local pathActors = {}
 for pn = 1,2 do
 	pathActors[pn] = {}
 	for lane = 1,4 do
+		local pff = playerFullAF[pn]
 		local pnL = pn
 		local lnL = lane
-		pathAF[#pathAF + 1] = Def.ActorMultiVertex
+		playerFullAF[pn][#pff + 1] = Def.ActorMultiVertex
 		{
 			Name = "PathLaneP"..pnL.."_"..lnL,
 			InitCommand = function(self)
@@ -445,25 +461,49 @@ for pn = 1,2 do
 			end,
 			OnCommand = function(self)
 				if plr[pnL] then
-					self:xy(plr[pnL]:GetX(), plr[pnL]:GetY())
+					--self:xy(plr[pnL]:GetX(), plr[pnL]:GetY())
 
 					local nf = plr[pnL]:GetChild('NoteField')
 					local colActors = nf:GetColumnActors()
 					local splHandle = colActors[lnL]:GetPosHandler()
-					local splObject = splHandle:GetSpline()
-					pathActors[pn][lane] = {self, splObject}
+					--local splObject = splHandle:GetSpline()
+					pathActors[pn][lane] = {self, splHandle}
 
 					self:SetLineWidth(3)					
 						:SetDrawState{First = 1,
 									  Num = 0,
 									  Mode = "DrawMode_LineStrip"}
+
+
+
+					local splObject = splHandle:GetSpline()
+					local splSize = 8
+					splObject:SetSize(splSize)
+					for spli = 1,splSize do
+						splObject:SetPoint(spli, {
+							0, --64*math.sin(spli*4*PI/splSize) * (spli-1)/splSize,
+							0,
+							64*math.cos(spli*4*PI/splSize) * (spli-1)/splSize
+						})
+					end
+					splObject:Solve()
+					splHandle:SetSplineMode('NoteColumnSplineMode_Offset')
+							 :SetBeatsPerT(0.5)
+
+
+					local splRotHdl = colActors[lnL]:GetRotHandler()
+					local splRotObj = splRotHdl:GetSpline()
+					splRotHdl:SetSplineMode('NoteColumnSplineMode_Offset')
+							 :SetBeatsPerT(1)
+					splRotObj:SetSize(2)
+							 :SetPoint(1, {90, 0, 0})
+							 :SetPoint(2, {90, 0, 0})
+							 :Solve()
 				end
 			end,
 		}
 	end
 end
-
-_FG_[#_FG_ + 1] = pathAF
 
 --
 --		Some arrow paths
@@ -471,108 +511,10 @@ _FG_[#_FG_ + 1] = pathAF
 -------------------------------------------------------------------------------
 
 
--------------------------------------------------------------------------------
---
---		gfx update function
---
-
-vt_last = nil
-function gfxUpdateFunction()
-	-- Most things are determined by beat, believe it or not.		
-	local vt = GAMESTATE:GetSongBeat() + visualOffset
-
-	if not vt_last then
-		vt_last = vt
-	end
-		
-	-- TODO: this assumes the effect applies over a constant BPM section!!
-	BPS = GAMESTATE:GetSongBPS()
-
-	local ppz = 1.0 + treeZExtend
-	if treesFrame then
-		treesFrame:rotationx(math.sin(vt * PI / 13.0) * 5.0 + 15.0)
-				  :rotationy(math.sin(vt * PI / 17.0) * 10.0 + 0.0)
-		for ti = 1,#trees do
-			if trees[ti][1] then
-				local vx = trees[ti][2]
-				local vy = trees[ti][3]
-				local vz = 1.0 - math.fmod(vt / 8.0 - trees[ti][4] - treeZExtend + ppz, ppz)
-				trees[ti][1]:xy(vx * treePlace[1], vy * -treePlace[2])
-							:z(vz * treePlace[3])
-							:diffusealpha(math.sqrt(RangeScale(vz, -treeZExtend, 1.0, 1.0, 0.5)))
-			end
-		end
-		for hi = 1,#hills do
-			if hills[hi][1] then
-				local vz = 1.0 - math.fmod(vt / 8.0 - hills[hi][2] - treeZExtend + ppz, ppz)
-				hills[hi][1]:z(vz * treePlace[3])
-			end
-		end
-		for pn = 1,2 do
-			for lane = 1,4 do
-				if pathActors[pn][lane] then
-					local pact = pathActors[pn][lane][1]
-					local psta = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn)
-					local maxT = 480.0
-					local stepT = 16.0
-
-					if psta then 
-						local verts = {}
-						for t = 0,maxT,stepT do
-							local px = ArrowEffects.GetXPos(psta, lane, t)
-							local py = ArrowEffects.GetYPos(psta, lane, t)
-							local pz = ArrowEffects.GetZPos(psta, lane, t)
-							verts[#verts+1] = {
-								{px, py, pz},
-								HSV2RGB({90*(t/maxT + lane - 1) + 45*pn, 1.0, 0.5, 1.0})
-							}
-							Trace('### t = '..t..', px = '..px..', py = '..py..', pz = '..pz)
-						end
-						pact:SetLineWidth(6)
-							:SetVertices(verts)
-							:SetDrawState{First = 1,
-										  Num = -1,
-										  Mode = "DrawMode_LineStrip"}
-					end
-
---					if pathActors[pn][lane][2] then
---						local spl = pathActors[pn][lane][2]
---
---						local verts = {}
---						local maxT = spl:GetMaxT()
---						Trace('### maxT = '..maxT..', spl = '..spl:GetDimension()..'D '..spl:GetSize()..'-pt')
---						for t = 0,0.1,maxT do
---							verts[#verts+1] = {
---								spl:Evaluate(t),
---								HSV2RGB({90*(t/maxT + lane - 1), 1.0, 0.5, 1.0})
---							}
---						end
---						pact:SetVertices(verts)
---							:SetDrawState{First = 1,
---										  Num = -1,
---										  Mode = "DrawMode_LineStrip"}
---					end
-				end
-			end
-		end
-	end
-
-	vt_last = vt
-end
-
---
---		gfx update function
---
--------------------------------------------------------------------------------
-
-
-
---#############################################################################
---## BEGIN UPSTREAM ###########################################################
 
 -------------------------------------------------------------------------------
 --
--- 		This is where the shit will be happening.
+-- 		Message listing
 --
 
 local messageList = {
@@ -580,7 +522,7 @@ local messageList = {
 	-- [2]: message title
 	-- [3]: optional table of arguments passed to message
 	
-	{  0.00, "CenterProxies"},	
+	{  0.10, "RecenterProxy"},	
 	{  0.00, "GhostDiffuse", {0.1}},
 	{  0.00, "GhostProxiesOff"},	
 	{  8.00, "GradientChange", {Gradient_HorizontalSpread}},	
@@ -648,7 +590,189 @@ local messageList = {
 	{536.00, "GhostDiffuse", {0.0, 4}},
 }
 
+--
+-- 		Message listing
+--
+-------------------------------------------------------------------------------
 
+
+-------------------------------------------------------------------------------
+--
+--		gfx update function
+--
+
+vt_last = nil
+function gfxUpdateFunction()
+	-- Most things are determined by beat, believe it or not.		
+	local vt = GAMESTATE:GetSongBeat() + visualOffset
+
+	if not vt_last then
+		vt_last = vt
+	end
+		
+	-- TODO: this assumes the effect applies over a constant BPM section!!
+	BPS = GAMESTATE:GetSongBPS()
+	
+	-- Initializations
+	if vt >=   0.0 and not checked then
+		for i,v in ipairs(plr) do
+			if v then
+				v:visible(false)
+				 :xy(sw/2, sh/2)					-- TODO: why this height??
+				 :z(0)
+				PlayerFullFrames[i]:z(treePlace[3])
+			end
+		end
+
+		checked = true
+	end
+			
+	-- Broadcast messages on their own terms.
+	while true do
+		if fgmsg < #messageList then
+			messageBeat, messageName, messageArgs = unpack(messageList[fgmsg+1])
+			if vt >= messageBeat then			
+				if messageArgs then
+					MESSAGEMAN:Broadcast( messageName, messageArgs )
+				else
+					MESSAGEMAN:Broadcast( messageName )
+				end
+				
+				fgmsg = fgmsg + 1
+			else
+				break
+			end
+		else
+			break
+		end
+	end
+
+
+
+
+--	for i,v in ipairs(plr) do
+--		if v then
+--			Trace('Player '..i..': x = '..v:GetX()..', y = '..v:GetY())
+--		end
+--	end
+
+
+	local ppz = 1.0 + treeZExtend
+	if treesFrame then
+		treesFrame:rotationy(math.sin(vt * PI / 17.0) * 10.0 + 0.0)
+				  :rotationx(math.sin(vt * PI / 13.0) * 5.0 + 15.0)
+				  
+		for ti = 1,#trees do
+			if trees[ti][1] then
+				local vx = trees[ti][2]
+				local vy = trees[ti][3]
+				local vz = 1.0 - math.fmod(vt / 8.0 - trees[ti][4] - treeZExtend + ppz, ppz)
+				trees[ti][1]:xy(vx * treePlace[1], vy * -treePlace[2])
+							:z(vz * treePlace[3])
+							:diffusealpha(math.sqrt(RangeScale(vz, -treeZExtend, 1.0, 1.0, 0.5)))
+			end
+		end
+		for hi = 1,#hills do
+			if hills[hi][1] then
+				local vz = 1.0 - math.fmod(vt / 8.0 - hills[hi][2] - treeZExtend + ppz, ppz)
+				hills[hi][1]:z(vz * treePlace[3])
+			end
+		end
+	end
+
+	if PlayerTreeView then
+		for pn = 1,2 do
+			for lane = 1,4 do
+				if pathActors[pn][lane] then
+					local pact = pathActors[pn][lane][1]
+					local psph = pathActors[pn][lane][2]
+					local psta = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn)
+					local maxP = 800.0
+					local stepP = 16.0
+					local nSteps = math.floor(maxP / stepP) + 1
+
+					-- Construct a list of vertices for the path.
+					local verts = {}
+					for ti = 1,nSteps do
+						verts[ti] = {
+							{0, 0, 0},
+							HSV2RGB({90*(ti/nSteps) + 30*(lane - 1) + 15*pn + 210, 1.0, 0.5, math.sqrt(ti/nSteps)})
+						}
+					end
+
+					-- Contribution from regular old arrow effects (mods).
+					if psta and not (psph and psph:GetSplineMode() == 'NoteColumnSplineMode_Position') then 
+						for ti = 1,nSteps do
+							-- ArrowEffects offset functions' input is defined as pixels down the lane, essentially
+							local t = ti * stepP
+							local px = ArrowEffects.GetXPos(psta, lane, t)
+							local py = ArrowEffects.GetYPos(psta, lane, t)
+							local pz = ArrowEffects.GetZPos(psta, lane, t)
+
+							verts[ti][1][1] = verts[ti][1][1] + px
+							verts[ti][1][2] = verts[ti][1][2] + py
+							verts[ti][1][3] = verts[ti][1][3] + pz
+							--Trace('### arreff['..pn..']['..lane..']: t = '..t..', px = '..px..', py = '..py..', pz = '..pz)
+						end
+					end
+
+					-- Contribution from user splines.
+					if psph and psph:GetSplineMode() ~= 'NoteColumnSplineMode_Disabled' then
+						local spl = psph:GetSpline()
+						local bpt = psph:GetBeatsPerT()
+						--Trace('### maxP = '..maxP..', spl = '..spl:GetDimension()..'D '..spl:GetSize()..'-pt')
+
+						--local maxT = spl:GetMaxT()
+						for ti = 1,nSteps do
+							-- The note column spline evaluator's input is defined as "t"
+							-- and a certain number of beats is allotted to each unit of t by handler:SetBeatsPerT()
+							-- so ya gotta Relate all these Numeral's Togethe'r
+							-- TODO: when the speed mod isn't constant, it has to be accounted for directly
+							local pixY = ti * stepP
+							local t = pixY / (niceSpeed * 64 * bpt)
+							local pp = spl:Evaluate(t)
+
+							verts[ti][1][1] = verts[ti][1][1] + pp[1]
+							verts[ti][1][2] = verts[ti][1][2] + pp[2]
+							verts[ti][1][3] = verts[ti][1][3] + pp[3]
+							--Trace('### spline['..pn..']['..lane..']: t = '..t..', px = '..pp[1]..', py = '..pp[2]..', pz = '..pp[3])
+						end						
+					end
+
+					pact:SetLineWidth(6)
+						:SetVertices(verts)
+						:SetDrawState{First = 1,
+									  Num = -1,
+									  Mode = "DrawMode_LineStrip"}
+						:x(PlayerProxyActors[pn]:GetX())
+						:y(PlayerProxyActors[pn]:GetY())		-- TODO: how to set this Y offset?!
+						:z(PlayerProxyActors[pn]:GetZ())
+				end
+			end
+
+			PlayerFullFrames[pn]:rotationx(-90)
+					  			:zoomx(1.5)
+					  			:zoomy(2)
+					  			:zoomz(1.5)
+			--Trace('### plr '..pn..': RX = '..plr[pn]:GetRotationX()..', RY = '..plr[pn]:GetRotationY()..', RZ = '..plr[pn]:GetRotationZ())
+		end
+
+		PlayerTreeView:rotationy(math.sin(vt * PI / 17.0) * 10.0 - 0.0)
+			  		  :rotationx(math.sin(vt * PI / 13.0) * 5.0 + 30.0)
+	end
+
+	vt_last = vt
+end
+
+--
+--		gfx update function
+--
+-------------------------------------------------------------------------------
+
+
+
+--#############################################################################
+--## BEGIN UPSTREAM ###########################################################
 
 -------------------------------------------------------------------------------
 --
@@ -709,12 +833,13 @@ _FG_[#_FG_ + 1] = Def.ActorFrame {
 -- Put it all together.
 --
 
+_FG_[#_FG_ + 1] = playerValleyAF
+
 -- Load the HUD reducer into this script.
 _FG_[#_FG_ + 1] = LoadActor("./hudreducer.lua")
 Trace('### Forest: Loaded HUD Reducer')
 
 -- Load the mods table parser into this script.
-niceSpeed = (420 + 69) / 150			-- This song is 150 BPM.
 modsTable = {
 	-- [1]: beat start
 	-- [2]: mod type
@@ -723,11 +848,14 @@ modsTable = {
 	-- [5]: player application (1 = P1, 2 = P2, 3 = both, 0 = neither)
 		
 		{   0.0,	"ScrollSpeed",	niceSpeed,    8.0,	3}, 
-		{   0.0,	"Dark",				  0.8,    8.0,	3}, 
-		{   0.0,	"Tipsy",			  1.0,    8.0,	3},  
-		{   0.0,	"Drunk",			  0.5,    8.0,	3},
-		{   0.0,	"Beat",				  2.0,    8.0,	2}, 
-		{   0.0,	"Tornado",			  0.5,    8.0,	1}, 
+		{   0.0,	"Dark",				  0.2,    8.0,	3}, 
+--		{   0.0,	"Tipsy",			  1.0,    8.0,	3},  
+--		{   0.0,	"Drunk",			  0.5,    8.0,	3},
+		{   0.0,	"Beat",				  2.0,    8.0,	3}, 
+		{   0.0,	"Tornado",			  1.0,    8.0,	3}, 
+		{   0.0,	"Flip",				 -0.2,    8.0,	3}, 
+		{   0.0,	"Sudden",			  0.9,    8.0,	3}, 
+		{   0.0,	"SuddenOffset",		  1.0,    8.0,	3}, 
 }
 _FG_[#_FG_ + 1] = LoadActor("./modsHQ.lua", {modsTable, 0})
 Trace('### Forest: Loaded mods HQ')
