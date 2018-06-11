@@ -136,6 +136,8 @@ for pn = 1,2 do
 				self:xy(0, 0)
 --				self:aux( tonumber(string.match(self:GetName(), "_([0-9]+)")) )
 			end,
+			OnCommand = function(self)
+			end,
 			CenterProxiesMessageCommand = function(self)
 --				self:decelerate(8.0 / BPS):xy(sw/2, sh/2)
 			end,
@@ -146,7 +148,7 @@ for pn = 1,2 do
 			self:xy(0, 0)
 		end,
 		OnCommand = function(self)
-			self:fov(45)
+			self:fov(90)
 				:SetDrawByZPosition(true)
 		end,
 	}
@@ -262,7 +264,7 @@ local treesAF = Def.ActorFrame {
 	BeginCommand = function(self)
 	end,
 	OnCommand = function(self)
-		self:fov(45)
+		self:fov(90)
 			:SetDrawByZPosition(true)
 	end,	
 }
@@ -469,9 +471,11 @@ splActive.camper = {
 	{256, 288, 2, 2, false},
 	{288, 320, 2, 2, true},	
 }
-local splValleyTrace = {}	-- x coordinate only, [-1, 1]
-for i = 1,splSize do
-	splValleyTrace[#splValleyTrace + 1] = math.random() - 0.5
+local splValleyTrace = {0}	-- x coordinate only, [-1, 1]
+for i = 2,splSize do
+	-- Let's try to go the opposite direction from the previous point.
+	-- In a contractive way (hahaha runaway boys)
+	splValleyTrace[#splValleyTrace + 1] = (math.random() - 0.5) * 0.5 - splValleyTrace[i-1] * 0.5
 end
 
 for pn = 1,2 do
@@ -495,6 +499,7 @@ for pn = 1,2 do
 					local splHandle = colActors[lnL]:GetPosHandler()
 					--local splObject = splHandle:GetSpline()
 					pathActors[pn][lane] = {self, splHandle}
+					nf:fov(90)
 
 					self:SetLineWidth(3)					
 						:SetDrawState{First = 1,
@@ -882,7 +887,7 @@ modsTable = {
 		{   0.0,	"Beat",				  1.0,    8.0,	1}, 
 		{   0.0,	"Beat",				 -1.0,    8.0,	2}, 
 --		{   0.0,	"Tornado",			  1.0,    8.0,	3}, 
-		{   0.0,	"Flip",				 -0.1,    8.0,	3}, 
+--		{   0.0,	"Flip",				 -0.1,    8.0,	3}, 
 		{   0.0,	"Sudden",			  0.9,    8.0,	3}, 
 		{   0.0,	"SuddenOffset",		  2.0,    8.0,	3}, 
 }
