@@ -447,6 +447,33 @@ _FG_[#_FG_ + 1] = treesAF
 --
 
 local pathActors = {}
+local splSize = 528
+local splTilt = 0.03
+local splActive = {
+	-- Lead in by [3] beats before [1]
+	-- Lead out by [4] beats before [2]
+	flight = {},
+	camper = {},
+	ascend = {},
+}
+splActive.flight = {
+	{112, 184, 8, 4},
+--	{320, 384, 8, 2},
+	{448, 512, 4, 8},
+}
+splActive.camper = {
+	-- Lead in by [3] beats before [1]
+	-- Lead out by [4] beats before [2]
+	-- [5] determines if fire cube in effect or not
+	{192, 256, 8, 2, true},
+	{256, 288, 2, 2, false},
+	{288, 320, 2, 2, true},	
+}
+local splValleyTrace = {}	-- x coordinate only, [-1, 1]
+for i = 1,splSize do
+	splValleyTrace[#splValleyTrace + 1] = math.random() - 0.5
+end
+
 for pn = 1,2 do
 	pathActors[pn] = {}
 	for lane = 1,4 do
@@ -476,19 +503,20 @@ for pn = 1,2 do
 
 
 
+					splHandle:SetSplineMode('NoteColumnSplineMode_Offset')
+							 :SetSubtractSongBeat(false)
+							 :SetReceptorT(0.0)
+							 :SetBeatsPerT(1.0)
 					local splObject = splHandle:GetSpline()
-					local splSize = 8
 					splObject:SetSize(splSize)
 					for spli = 1,splSize do
 						splObject:SetPoint(spli, {
-							0, --64*math.sin(spli*4*PI/splSize) * (spli-1)/splSize,
+							treePlace[1] * splValleyTrace[spli],
 							0,
-							64*math.cos(spli*4*PI/splSize) * (spli-1)/splSize
+							treePlace[3] * splValleyTrace[spli] * splTilt * (2.5 - lane)
 						})
 					end
 					splObject:Solve()
-					splHandle:SetSplineMode('NoteColumnSplineMode_Offset')
-							 :SetBeatsPerT(0.5)
 
 
 					local splRotHdl = colActors[lnL]:GetRotHandler()
@@ -687,7 +715,7 @@ function gfxUpdateFunction()
 					local pact = pathActors[pn][lane][1]
 					local psph = pathActors[pn][lane][2]
 					local psta = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn)
-					local maxP = 800.0
+					local maxP = 640.0
 					local stepP = 16.0
 					local nSteps = math.floor(maxP / stepP) + 1
 
@@ -729,7 +757,7 @@ function gfxUpdateFunction()
 							-- so ya gotta Relate all these Numeral's Togethe'r
 							-- TODO: when the speed mod isn't constant, it has to be accounted for directly
 							local pixY = ti * stepP
-							local t = pixY / (niceSpeed * 64 * bpt)
+							local t = pixY / (niceSpeed * 64 * bpt) + vt / bpt
 							local pp = spl:Evaluate(t)
 
 							verts[ti][1][1] = verts[ti][1][1] + pp[1]
@@ -752,8 +780,8 @@ function gfxUpdateFunction()
 
 			PlayerFullFrames[pn]:rotationx(-90)
 					  			:zoomx(1.5)
-					  			:zoomy(2)
-					  			:zoomz(1.5)
+					  			:zoomy(1.5)
+					  			:zoomz(2)
 			--Trace('### plr '..pn..': RX = '..plr[pn]:GetRotationX()..', RY = '..plr[pn]:GetRotationY()..', RZ = '..plr[pn]:GetRotationZ())
 		end
 
@@ -851,11 +879,12 @@ modsTable = {
 		{   0.0,	"Dark",				  0.2,    8.0,	3}, 
 --		{   0.0,	"Tipsy",			  1.0,    8.0,	3},  
 --		{   0.0,	"Drunk",			  0.5,    8.0,	3},
-		{   0.0,	"Beat",				  2.0,    8.0,	3}, 
-		{   0.0,	"Tornado",			  1.0,    8.0,	3}, 
-		{   0.0,	"Flip",				 -0.2,    8.0,	3}, 
+		{   0.0,	"Beat",				  1.0,    8.0,	1}, 
+		{   0.0,	"Beat",				 -1.0,    8.0,	2}, 
+--		{   0.0,	"Tornado",			  1.0,    8.0,	3}, 
+		{   0.0,	"Flip",				 -0.1,    8.0,	3}, 
 		{   0.0,	"Sudden",			  0.9,    8.0,	3}, 
-		{   0.0,	"SuddenOffset",		  1.0,    8.0,	3}, 
+		{   0.0,	"SuddenOffset",		  2.0,    8.0,	3}, 
 }
 _FG_[#_FG_ + 1] = LoadActor("./modsHQ.lua", {modsTable, 0})
 Trace('### Forest: Loaded mods HQ')
