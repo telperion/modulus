@@ -30,9 +30,11 @@ local visualOffset = -0.01
 local fgmsg = 0
 local fgcmd = 0
 local checked = false
+local proxiesCentered = false
 local plr = {nil, nil}
 
 local PI = math.pi
+local EPS = 0.001
 local LOG2 = math.log(2.0)
 local SQRT2 = math.sqrt(2.0)
 local DEG_TO_RAD = math.pi / 180.0
@@ -71,16 +73,19 @@ Trace('### Forest: Loaded Helpers')
 
 
 
--------------------------------------------------------------------------------
---
--- 		Playfield proxies
---
+
+
+local playerFullAF = {}
 
 local PlayerProxyActors = {}
 local PlayerFullFrames = {}
 local PlayerTreeView = nil
 
-local playerFullAF = {}
+-------------------------------------------------------------------------------
+--
+-- 		Playfield proxies
+--
+
 local playerValleyAF = Def.ActorFrame {
 	InitCommand = function(self)
 		PlayerTreeView = self
@@ -128,6 +133,7 @@ for pn = 1,2 do
 --						self:GetParent():xy(McCoy:GetX(), McCoy:GetY())
 						Trace("Player "..self:getaux()..": x = "..McCoy:GetX()..", y = "..McCoy:GetY())
 						Trace("Player "..self:getaux().." Proxy recentered itself!")
+						proxiesCentered = true
 					end
 				end,
 			},
@@ -192,6 +198,125 @@ end
 
 -------------------------------------------------------------------------------
 --
+--		Some arrow paths
+--
+
+local pathActors = {}
+local splSize = 528
+local splTilt = 0.03
+local splActive = {
+	-- Lead in by [3] beats before [1]
+	-- Lead out by [4] beats before [2]
+	flight = {},
+	camper = {},
+	ascend = {},
+}
+splActive.flight = {
+	{112, 184, 8, 4},
+--	{320, 384, 8, 2},
+	{448, 512, 4, 8},
+}
+splActive.camper = {
+	-- Lead in by [3] beats before [1]
+	-- Lead out by [4] beats before [2]
+	-- [5] determines if fire cube in effect or not
+	{192, 256, 8, 2, true},
+	{256, 288, 2, 2, false},
+	{288, 320, 2, 2, true},	
+}
+local splValleyTrace = {0}	-- x coordinate only, [-1, 1]
+for i = 2,splSize do
+	-- Let's try to go the opposite direction from the previous point.
+	-- In a contractive way (hahaha runaway boys)
+	splValleyTrace[#splValleyTrace + 1] = (math.random() - 0.5) * 0.5 - splValleyTrace[i-1] * 0.5
+end
+
+
+function EngageForestscapeFlight(splHandle, lane, extentX, extentZ)
+	splHandle:SetSplineMode('NoteColumnSplineMode_Offset')
+			 :SetSubtractSongBeat(false)
+			 :SetReceptorT(0.0)
+			 :SetBeatsPerT(1.0)
+	local splObject = splHandle:GetSpline()
+	splObject:SetSize(splSize)
+	for spli = 1,splSize do
+		splObject:SetPoint(spli, {
+			extentX * splValleyTrace[spli],
+			0,
+			extentZ * splValleyTrace[spli] * splTilt * (2.5 - lane)
+		})
+	end
+	splObject:Solve()
+end
+function DisengageForestscapeFlight(splHandle, lane, extentX, extentZ)
+	splHandle:SetSplineMode('NoteColumnSplineMode_Disabled')
+			 :SetSubtractSongBeat(false)
+			 :SetReceptorT(0.0)
+			 :SetBeatsPerT(1.0)
+	local splObject = splHandle:GetSpline()
+	splObject:SetSize(splSize)
+	for spli = 1,splSize do
+		splObject:SetPoint(spli, {
+			0,
+			0,
+			0
+		})
+	end
+	splObject:Solve()
+end
+
+for pn = 1,2 do
+	pathActors[pn] = {}
+	for lane = 1,4 do
+		local pff = playerFullAF[pn]
+		local pnL = pn
+		local lnL = lane
+		playerFullAF[pn][#pff + 1] = Def.ActorMultiVertex
+		{
+			Name = "PathLaneP"..pnL.."_"..lnL,
+			InitCommand = function(self)
+				pathActors[pn][lane] = {self, nil}
+			end,
+			OnCommand = function(self)
+				if plr[pnL] then
+					--self:xy(plr[pnL]:GetX(), plr[pnL]:GetY())
+
+					local nf = plr[pnL]:GetChild('NoteField')
+					local colActors = nf:GetColumnActors()
+					local splHandle = colActors[lnL]:GetPosHandler()
+					local splRotHdl = colActors[lnL]:GetRotHandler()
+					local splZoomHdl = colActors[lnL]:GetZoomHandler()
+					pathActors[pn][lane] = {self, splHandle, splRotHdl, splZoomHdl}
+					nf:fov(90)
+
+					self:SetLineWidth(3)					
+						:SetDrawState{First = 1,
+									  Num = 0,
+									  Mode = "DrawMode_LineStrip"}
+
+					DisengageForestscapeFlight(splHandle, lane, 0, 0)
+
+					local splRotObj = splRotHdl:GetSpline()
+					splRotHdl:SetSplineMode('NoteColumnSplineMode_Offset')
+							 :SetBeatsPerT(1)
+					splRotObj:SetSize(2)
+							 :SetPoint(1, {0, 0, 0})
+							 :SetPoint(2, {0, 0, 0})
+							 :Solve()
+				end
+			end,
+		}
+	end
+end
+
+--
+--		Some arrow paths
+--
+-------------------------------------------------------------------------------
+
+
+-------------------------------------------------------------------------------
+--
 --		Extra nuts 'n' bolts
 --
 
@@ -241,14 +366,15 @@ function Hillside(vx)
 end
 
 
+local forestscapeAuxActor = nil
 local treePlace = {0.5 * sw, 0.4 * sh, -30 * math.sqrt(sw, sh)}
 local treeZExtend = 0.5
 local treeSize = {60, 60, 1}
 local treeColorVariation = 0.1
 local nTrees = 500
 local nHillSdv = 20
-local nBPCorner = 12
-local bpRadCurve = 0.2
+local nBPCorner = 6
+local bpRadCurve = 0.1
 local altitude = 1.5
 local trees = {}
 local hills = {}
@@ -435,6 +561,53 @@ for i=1,1 do
 end
 
 _FG_[#_FG_ + 1] = treesAF
+_FG_[#_FG_ + 1] = Def.ActorFrame {
+	InitCommand = function(self)
+		forestscapeAuxActor = self
+		self:aux(0)
+	end,
+
+	ShowForestscapeMessageCommand = function(self, args)
+		local tweenTime 	= (args and (#args >= 1) and args[1]) or 0
+
+		if treesFrame then
+			treesFrame:visible(1)
+		end
+		for pn=1,2 do
+			for lane=1,4 do
+				if pathActors[pn][lane] then					
+					EngageForestscapeFlight(pathActors[pn][lane][2], lane, treePlace[1], treePlace[3])
+				end
+			end
+		end
+			
+		if tweenTime > EPS then
+			self:decelerate(tweenTime / BPS)
+		end
+		self:aux(1)
+	end,
+	HideForestscapeMessageCommand = function(self, args)
+		local tweenTime 	= (args and (#args >= 1) and args[1]) or 0
+
+		if tweenTime > EPS then
+			self:accelerate(tweenTime / BPS)
+		end
+		self:aux(0)
+			:queuecommand('HideForestscape2')
+	end,
+	HideForestscape2Command = function(self)	
+		if treesFrame then
+			treesFrame:visible(0)
+		end
+		for pn=1,2 do
+			for lane=1,4 do
+				if pathActors[pn][lane] then					
+					DisengageForestscapeFlight(pathActors[pn][lane][2], lane, 0, 0)
+				end
+			end
+		end
+	end,
+}
 
 --
 --		Some trees
@@ -442,106 +615,6 @@ _FG_[#_FG_ + 1] = treesAF
 -------------------------------------------------------------------------------
 
 
-
--------------------------------------------------------------------------------
---
---		Some arrow paths
---
-
-local pathActors = {}
-local splSize = 528
-local splTilt = 0.03
-local splActive = {
-	-- Lead in by [3] beats before [1]
-	-- Lead out by [4] beats before [2]
-	flight = {},
-	camper = {},
-	ascend = {},
-}
-splActive.flight = {
-	{112, 184, 8, 4},
---	{320, 384, 8, 2},
-	{448, 512, 4, 8},
-}
-splActive.camper = {
-	-- Lead in by [3] beats before [1]
-	-- Lead out by [4] beats before [2]
-	-- [5] determines if fire cube in effect or not
-	{192, 256, 8, 2, true},
-	{256, 288, 2, 2, false},
-	{288, 320, 2, 2, true},	
-}
-local splValleyTrace = {0}	-- x coordinate only, [-1, 1]
-for i = 2,splSize do
-	-- Let's try to go the opposite direction from the previous point.
-	-- In a contractive way (hahaha runaway boys)
-	splValleyTrace[#splValleyTrace + 1] = (math.random() - 0.5) * 0.5 - splValleyTrace[i-1] * 0.5
-end
-
-for pn = 1,2 do
-	pathActors[pn] = {}
-	for lane = 1,4 do
-		local pff = playerFullAF[pn]
-		local pnL = pn
-		local lnL = lane
-		playerFullAF[pn][#pff + 1] = Def.ActorMultiVertex
-		{
-			Name = "PathLaneP"..pnL.."_"..lnL,
-			InitCommand = function(self)
-				pathActors[pn][lane] = {self, nil}
-			end,
-			OnCommand = function(self)
-				if plr[pnL] then
-					--self:xy(plr[pnL]:GetX(), plr[pnL]:GetY())
-
-					local nf = plr[pnL]:GetChild('NoteField')
-					local colActors = nf:GetColumnActors()
-					local splHandle = colActors[lnL]:GetPosHandler()
-					--local splObject = splHandle:GetSpline()
-					pathActors[pn][lane] = {self, splHandle}
-					nf:fov(90)
-
-					self:SetLineWidth(3)					
-						:SetDrawState{First = 1,
-									  Num = 0,
-									  Mode = "DrawMode_LineStrip"}
-
-
-
-					splHandle:SetSplineMode('NoteColumnSplineMode_Offset')
-							 :SetSubtractSongBeat(false)
-							 :SetReceptorT(0.0)
-							 :SetBeatsPerT(1.0)
-					local splObject = splHandle:GetSpline()
-					splObject:SetSize(splSize)
-					for spli = 1,splSize do
-						splObject:SetPoint(spli, {
-							treePlace[1] * splValleyTrace[spli],
-							0,
-							treePlace[3] * splValleyTrace[spli] * splTilt * (2.5 - lane)
-						})
-					end
-					splObject:Solve()
-
-
-					local splRotHdl = colActors[lnL]:GetRotHandler()
-					local splRotObj = splRotHdl:GetSpline()
-					splRotHdl:SetSplineMode('NoteColumnSplineMode_Offset')
-							 :SetBeatsPerT(1)
-					splRotObj:SetSize(2)
-							 :SetPoint(1, {90, 0, 0})
-							 :SetPoint(2, {90, 0, 0})
-							 :Solve()
-				end
-			end,
-		}
-	end
-end
-
---
---		Some arrow paths
---
--------------------------------------------------------------------------------
 
 
 
@@ -555,6 +628,9 @@ local messageList = {
 	-- [2]: message title
 	-- [3]: optional table of arguments passed to message
 	
+	{  0.00, "HideForestscape"},	
+	{  16.00, "ShowForestscape", {8.0}},
+	{  48.00, "HideForestscape", {8.0}},
 	{  0.10, "RecenterProxy"},	
 	{  0.00, "GhostDiffuse", {0.1}},
 	{  0.00, "GhostProxiesOff"},	
@@ -636,6 +712,11 @@ local messageList = {
 
 vt_last = nil
 function gfxUpdateFunction()
+	-------------------------------------------------------------------------------
+	--
+	--	Basic setup (don't touch this much!!)
+	--
+
 	-- Most things are determined by beat, believe it or not.		
 	local vt = GAMESTATE:GetSongBeat() + visualOffset
 
@@ -651,9 +732,8 @@ function gfxUpdateFunction()
 		for i,v in ipairs(plr) do
 			if v then
 				v:visible(false)
-				 :xy(sw/2, sh/2)					-- TODO: why this height??
+				 --:xy(sw/2, sh/2)					-- TODO: why this height??
 				 :z(0)
-				PlayerFullFrames[i]:z(treePlace[3])
 			end
 		end
 
@@ -680,8 +760,93 @@ function gfxUpdateFunction()
 		end
 	end
 
+	--
+	--	Basic setup (don't touch this much!!)
+	--
+	-------------------------------------------------------------------------------
 
 
+	-------------------------------------------------------------------------------
+	--
+	--	Arrow path drawing portion (don't touch this much!!)
+	--
+
+	for pn = 1,2 do
+		for lane = 1,4 do
+			if pathActors[pn][lane] then
+				local pact = pathActors[pn][lane][1]
+				local psph = pathActors[pn][lane][2]
+				local psta = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn)
+				local maxP = 640.0
+				local stepP = 16.0
+				local nSteps = math.floor(maxP / stepP) + 1
+
+				-- Construct a list of vertices for the path.
+				local verts = {}
+				for ti = 1,nSteps do
+					verts[ti] = {
+						{0, 0, 0},
+						HSV2RGB({90*(ti/nSteps) + 30*(lane - 1) + 15*pn + 210, 1.0, 0.5, math.sqrt(ti/nSteps)})
+					}
+				end
+
+				-- Contribution from regular old arrow effects (mods).
+				if psta and not (psph and psph:GetSplineMode() == 'NoteColumnSplineMode_Position') then 
+					for ti = 1,nSteps do
+						-- ArrowEffects offset functions' input is defined as pixels down the lane, essentially
+						local t = ti * stepP
+						local px = ArrowEffects.GetXPos(psta, lane, t)
+						local py = ArrowEffects.GetYPos(psta, lane, t)
+						local pz = ArrowEffects.GetZPos(psta, lane, t)
+
+						verts[ti][1][1] = verts[ti][1][1] + px
+						verts[ti][1][2] = verts[ti][1][2] + py
+						verts[ti][1][3] = verts[ti][1][3] + pz
+						--Trace('### arreff['..pn..']['..lane..']: t = '..t..', px = '..px..', py = '..py..', pz = '..pz)
+					end
+				end
+
+				-- Contribution from user splines.
+				if psph and psph:GetSplineMode() ~= 'NoteColumnSplineMode_Disabled' then
+					local spl = psph:GetSpline()
+					local bpt = psph:GetBeatsPerT()
+					--Trace('### maxP = '..maxP..', spl = '..spl:GetDimension()..'D '..spl:GetSize()..'-pt')
+
+					--local maxT = spl:GetMaxT()
+					for ti = 1,nSteps do
+						-- The note column spline evaluator's input is defined as "t"
+						-- and a certain number of beats is allotted to each unit of t by handler:SetBeatsPerT()
+						-- so ya gotta Relate all these Numeral's Togethe'r
+						-- TODO: when the speed mod isn't constant, it has to be accounted for directly
+						local pixY = ti * stepP
+						local t = pixY / (niceSpeed * 64 * bpt) + vt / bpt
+						local pp = spl:Evaluate(t)
+
+						verts[ti][1][1] = verts[ti][1][1] + pp[1]
+						verts[ti][1][2] = verts[ti][1][2] + pp[2]
+						verts[ti][1][3] = verts[ti][1][3] + pp[3]
+						--Trace('### spline['..pn..']['..lane..']: t = '..t..', px = '..pp[1]..', py = '..pp[2]..', pz = '..pp[3])
+					end						
+				end
+
+				pact:SetLineWidth(6)
+					:SetVertices(verts)
+					:SetDrawState{First = 1,
+								  Num = -1,
+								  Mode = "DrawMode_LineStrip"}
+					:x(PlayerProxyActors[pn]:GetX())
+					:y(PlayerProxyActors[pn]:GetY())		-- TODO: how to set this Y offset?!
+					:z(PlayerProxyActors[pn]:GetZ())
+					:diffusealpha(0.5)
+			end
+		end
+	end
+
+	--
+	--	Arrow path drawing portion (don't touch this much!!)
+	--
+	-------------------------------------------------------------------------------
+	
 
 --	for i,v in ipairs(plr) do
 --		if v then
@@ -689,11 +854,19 @@ function gfxUpdateFunction()
 --		end
 --	end
 
+	-------------------------------------------------------------------------------	
+	--
+	--	Perframing: forest scape
+	--
+
+	local forestscapeParam = forestscapeAuxActor:getaux()
 
 	local ppz = 1.0 + treeZExtend
 	if treesFrame then
-		treesFrame:rotationy(math.sin(vt * PI / 17.0) * 10.0 + 0.0)
-				  :rotationx(math.sin(vt * PI / 13.0) * 5.0 + 15.0)
+		-- Preserve base rotation for the landscape only.
+		treesFrame:rotationy(forestscapeParam * (math.sin(vt * PI / 17.0) * 10.0) + 0.0)
+				  :rotationx(forestscapeParam * (math.sin(vt * PI / 13.0) * 5.0) + 15.0)
+				  :xy(sw * 0.5, sh * (3.0 - 1.8 * forestscapeParam))
 				  
 		for ti = 1,#trees do
 			if trees[ti][1] then
@@ -702,98 +875,66 @@ function gfxUpdateFunction()
 				local vz = 1.0 - math.fmod(vt / 8.0 - trees[ti][4] - treeZExtend + ppz, ppz)
 				trees[ti][1]:xy(vx * treePlace[1], vy * -treePlace[2])
 							:z(vz * treePlace[3])
-							:diffusealpha(math.sqrt(RangeScale(vz, -treeZExtend, 1.0, 1.0, 0.5)))
+							:diffusealpha(forestscapeParam * math.sqrt(RangeScale(vz, -treeZExtend, 1.0, 1.0, 0.1)))
 			end
 		end
 		for hi = 1,#hills do
 			if hills[hi][1] then
 				local vz = 1.0 - math.fmod(vt / 8.0 - hills[hi][2] - treeZExtend + ppz, ppz)
 				hills[hi][1]:z(vz * treePlace[3])
+							:diffusealpha(forestscapeParam)
 			end
 		end
 	end
 
 	if PlayerTreeView then
 		for pn = 1,2 do
+			PlayerFullFrames[pn]:rotationx(-90 * forestscapeParam)
+					  			:zoomx(1.0 + forestscapeParam * 0.5)
+					  			:zoomy(1.0 + forestscapeParam * 1.0)
+					  			:zoomz(1.0 + forestscapeParam * 0.5)
+					  			:z(forestscapeParam * treePlace[3])
+			--Trace('### plr '..pn..': RX = '..plr[pn]:GetRotationX()..', RY = '..plr[pn]:GetRotationY()..', RZ = '..plr[pn]:GetRotationZ())
+
 			for lane = 1,4 do
+				-- Dial in or out on the "confusionoffsetx".
+				-- Separate from arrow pathing but uses some common objects.
 				if pathActors[pn][lane] then
-					local pact = pathActors[pn][lane][1]
-					local psph = pathActors[pn][lane][2]
-					local psta = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn)
-					local maxP = 640.0
-					local stepP = 16.0
-					local nSteps = math.floor(maxP / stepP) + 1
-
-					-- Construct a list of vertices for the path.
-					local verts = {}
-					for ti = 1,nSteps do
-						verts[ti] = {
-							{0, 0, 0},
-							HSV2RGB({90*(ti/nSteps) + 30*(lane - 1) + 15*pn + 210, 1.0, 0.5, math.sqrt(ti/nSteps)})
-						}
-					end
-
-					-- Contribution from regular old arrow effects (mods).
-					if psta and not (psph and psph:GetSplineMode() == 'NoteColumnSplineMode_Position') then 
-						for ti = 1,nSteps do
-							-- ArrowEffects offset functions' input is defined as pixels down the lane, essentially
-							local t = ti * stepP
-							local px = ArrowEffects.GetXPos(psta, lane, t)
-							local py = ArrowEffects.GetYPos(psta, lane, t)
-							local pz = ArrowEffects.GetZPos(psta, lane, t)
-
-							verts[ti][1][1] = verts[ti][1][1] + px
-							verts[ti][1][2] = verts[ti][1][2] + py
-							verts[ti][1][3] = verts[ti][1][3] + pz
-							--Trace('### arreff['..pn..']['..lane..']: t = '..t..', px = '..px..', py = '..py..', pz = '..pz)
-						end
-					end
-
-					-- Contribution from user splines.
-					if psph and psph:GetSplineMode() ~= 'NoteColumnSplineMode_Disabled' then
-						local spl = psph:GetSpline()
-						local bpt = psph:GetBeatsPerT()
-						--Trace('### maxP = '..maxP..', spl = '..spl:GetDimension()..'D '..spl:GetSize()..'-pt')
-
-						--local maxT = spl:GetMaxT()
-						for ti = 1,nSteps do
-							-- The note column spline evaluator's input is defined as "t"
-							-- and a certain number of beats is allotted to each unit of t by handler:SetBeatsPerT()
-							-- so ya gotta Relate all these Numeral's Togethe'r
-							-- TODO: when the speed mod isn't constant, it has to be accounted for directly
-							local pixY = ti * stepP
-							local t = pixY / (niceSpeed * 64 * bpt) + vt / bpt
-							local pp = spl:Evaluate(t)
-
-							verts[ti][1][1] = verts[ti][1][1] + pp[1]
-							verts[ti][1][2] = verts[ti][1][2] + pp[2]
-							verts[ti][1][3] = verts[ti][1][3] + pp[3]
-							--Trace('### spline['..pn..']['..lane..']: t = '..t..', px = '..pp[1]..', py = '..pp[2]..', pz = '..pp[3])
-						end						
-					end
-
-					pact:SetLineWidth(6)
-						:SetVertices(verts)
-						:SetDrawState{First = 1,
-									  Num = -1,
-									  Mode = "DrawMode_LineStrip"}
-						:x(PlayerProxyActors[pn]:GetX())
-						:y(PlayerProxyActors[pn]:GetY())		-- TODO: how to set this Y offset?!
-						:z(PlayerProxyActors[pn]:GetZ())
+					local splRotHdl = pathActors[pn][lane][3]
+					local splRotObj = splRotHdl:GetSpline()
+					splRotHdl:SetSplineMode('NoteColumnSplineMode_Offset')
+							 :SetBeatsPerT(1)
+					splRotObj:SetSize(2)
+							 :SetPoint(1, {forestscapeParam * PI/2, 0, 0})
+							 :SetPoint(2, {forestscapeParam * PI/2, 0, 0})
+							 :Solve()
 				end
 			end
-
-			PlayerFullFrames[pn]:rotationx(-90)
-					  			:zoomx(1.5)
-					  			:zoomy(1.5)
-					  			:zoomz(2)
-			--Trace('### plr '..pn..': RX = '..plr[pn]:GetRotationX()..', RY = '..plr[pn]:GetRotationY()..', RZ = '..plr[pn]:GetRotationZ())
 		end
 
-		PlayerTreeView:rotationy(math.sin(vt * PI / 17.0) * 10.0 - 0.0)
-			  		  :rotationx(math.sin(vt * PI / 13.0) * 5.0 + 30.0)
+		backplate:diffusealpha(forestscapeParam * 0.5)
+
+		-- Don't preserve base rotation for the forestscape player container.
+		PlayerTreeView:rotationy(forestscapeParam * (math.sin(vt * PI / 17.0) * 10.0 - 0.0))
+			  		  :rotationx(forestscapeParam * (math.sin(vt * PI / 13.0) * 5.0 + 30.0))
 	end
 
+	--
+	--	Perframing: forest scape
+	--
+	-------------------------------------------------------------------------------	
+	
+
+	for pn = 1,2 do
+		if not proxiesCentered then
+			plr[pn]:xy(0, 0)
+		else
+			--plr[pn]:xy(0, -135 * (1.0 - forestscapeParam))		-- TODO: why this height?
+		end
+		PlayerFullFrames[pn]:xy(0, -270 * (1.0 - forestscapeParam))	-- TODO: why this height?
+	end
+
+	-- Final step.
 	vt_last = vt
 end
 
@@ -865,6 +1006,7 @@ _FG_[#_FG_ + 1] = Def.ActorFrame {
 --
 -- Put it all together.
 --
+messageList = SortModsTable(messageList)
 
 _FG_[#_FG_ + 1] = playerValleyAF
 
@@ -891,6 +1033,7 @@ modsTable = {
 		{   0.0,	"Sudden",			  0.9,    8.0,	3}, 
 		{   0.0,	"SuddenOffset",		  2.0,    8.0,	3}, 
 }
+modsTable = SortModsTable(modsTable)
 _FG_[#_FG_ + 1] = LoadActor("./modsHQ.lua", {modsTable, 0})
 Trace('### Forest: Loaded mods HQ')
 
