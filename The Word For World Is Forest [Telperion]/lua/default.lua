@@ -786,7 +786,7 @@ function gfxUpdateFunction()
 				for ti = 1,nSteps do
 					verts[ti] = {
 						{0, 0, 0},
-						HSV2RGB({90*(ti/nSteps) + 30*(lane - 1) + 15*pn + 210, 1.0, 0.5, math.sqrt(ti/nSteps)})
+						HSV2RGB({90*(ti/nSteps) + 30*(lane - 1) + 15*pn + 210, 1.0, 0.5, (ti/nSteps)})
 					}
 				end
 
@@ -837,7 +837,7 @@ function gfxUpdateFunction()
 					:x(PlayerProxyActors[pn]:GetX())
 					:y(PlayerProxyActors[pn]:GetY())		-- TODO: how to set this Y offset?!
 					:z(PlayerProxyActors[pn]:GetZ())
-					:diffusealpha(0.5)
+					:diffusealpha(1.0)
 			end
 		end
 	end
@@ -872,7 +872,7 @@ function gfxUpdateFunction()
 			if trees[ti][1] then
 				local vx = trees[ti][2]
 				local vy = trees[ti][3]
-				local vz = 1.0 - math.fmod(vt / 8.0 - trees[ti][4] - treeZExtend + ppz, ppz)
+				local vz = 1.0 - math.fmod(vt / 4.0 - trees[ti][4] - treeZExtend + ppz, ppz)
 				trees[ti][1]:xy(vx * treePlace[1], vy * -treePlace[2])
 							:z(vz * treePlace[3])
 							:diffusealpha(forestscapeParam * math.sqrt(RangeScale(vz, -treeZExtend, 1.0, 1.0, 0.1)))
@@ -908,6 +908,8 @@ function gfxUpdateFunction()
 							 :SetPoint(1, {forestscapeParam * PI/2, 0, 0})
 							 :SetPoint(2, {forestscapeParam * PI/2, 0, 0})
 							 :Solve()
+
+					pathActors[pn][lane][1]:diffusealpha(forestscapeParam)
 				end
 			end
 		end
