@@ -21,6 +21,7 @@ if circumvention then
 end
 
 local niceSpeed = (420 + 69) / 150			-- This song is 150 BPM.
+local slowSpeed = (420 - 69) / 150			-- This song is 150 BPM.
 local sw = SCREEN_WIDTH
 local sh = SCREEN_HEIGHT
 local BPS = GAMESTATE:GetSongBPS()
@@ -248,7 +249,7 @@ function EngageForestscapeFlight(splHandle, lane, extentX, extentZ)
 	end
 	splObject:Solve()
 end
-function DisengageForestscapeFlight(splHandle, lane, extentX, extentZ)
+function DisengageForestscapeFlight(splHandle, lane)
 	splHandle:SetSplineMode('NoteColumnSplineMode_Disabled')
 			 :SetSubtractSongBeat(false)
 			 :SetReceptorT(0.0)
@@ -294,7 +295,7 @@ for pn = 1,2 do
 									  Num = 0,
 									  Mode = "DrawMode_LineStrip"}
 
-					DisengageForestscapeFlight(splHandle, lane, 0, 0)
+					DisengageForestscapeFlight(splHandle, lane)
 
 					local splRotObj = splRotHdl:GetSpline()
 					splRotHdl:SetSplineMode('NoteColumnSplineMode_Offset')
@@ -382,7 +383,7 @@ local backplate = nil
 local treesFrame = nil
 local treesAF = Def.ActorFrame {
 	InitCommand = function(self)
-		self:xy(sw * 0.5, sh * 1.2)
+		self:xy(sw * 0.5, sh * 3.0)
 			:rotationx(15)
 
 		treesFrame = self
@@ -602,7 +603,7 @@ _FG_[#_FG_ + 1] = Def.ActorFrame {
 		for pn=1,2 do
 			for lane=1,4 do
 				if pathActors[pn][lane] then					
-					DisengageForestscapeFlight(pathActors[pn][lane][2], lane, 0, 0)
+					DisengageForestscapeFlight(pathActors[pn][lane][2], lane)
 				end
 			end
 		end
@@ -616,6 +617,143 @@ _FG_[#_FG_ + 1] = Def.ActorFrame {
 
 
 
+-------------------------------------------------------------------------------
+--
+-- 		Climb a tree I guess
+--
+
+local trunkascentAuxActor = nil
+local trunkOuterRadius = sw * 0.2
+local trunkInnerRadius = sw * 0.15
+local trunkPeriodY = sh * 0.3
+
+
+
+
+
+
+function EngageTrunkAscentClimb_Pos(splHandle, pn, lane, extentR, periodY)
+	splHandle:SetSplineMode('NoteColumnSplineMode_Position')
+			 :SetSubtractSongBeat(false)
+			 :SetReceptorT(0.0)
+			 :SetBeatsPerT(1.0)
+	local splObject = splHandle:GetSpline()
+	splObject:SetSize(splSize)
+	for spli = 1,splSize do
+		local trunkArg = (math.fmod(spli * slowSpeed / periodY) - 0.25 + lane*0.25 + pn*0.625) * 2 * PI
+		splObject:SetPoint(spli, {
+			extentR * spli * math.cos(trunkArg),
+			math.fmod(slowSpeed * spli, sh) - sh / 2,
+			extentR * spli * math.sin(trunkArg)
+		})
+	end
+	splObject:Solve()
+end
+function EngageTrunkAscentClimb_Rot(splHandle, pn, lane, extentR, periodY)
+	splHandle:SetSplineMode('NoteColumnSplineMode_Position')
+			 :SetSubtractSongBeat(false)
+			 :SetReceptorT(0.0)
+			 :SetBeatsPerT(1.0)
+	local splObject = splHandle:GetSpline()
+	splObject:SetSize(splSize)
+	for spli = 1,splSize do
+		local trunkArg = (math.fmod(spli * slowSpeed / periodY) - 0.25 + lane*0.125) * 2 * PI
+		splObject:SetPoint(spli, {
+			0,
+			trunkArg,
+			0
+		})
+	end
+	splObject:Solve()
+end
+function EngageTrunkAscentClimb_Zoom(splHandle, pn, lane, extentR, periodY)
+	splHandle:SetSplineMode('NoteColumnSplineMode_Position')
+			 :SetSubtractSongBeat(false)
+			 :SetReceptorT(0.0)
+			 :SetBeatsPerT(1.0)
+	local splObject = splHandle:GetSpline()
+	splObject:SetSize(splSize)
+	for spli = 1,splSize do
+		local trunkArg = (math.fmod(spli * slowSpeed / periodY) - 0.25 + lane*0.125) * 2 * PI
+		splObject:SetPoint(spli, {
+			0.8 + 0.4 * (spli % 2),
+			0.8 + 0.4 * (spli % 2),
+			1  + 10.0 * (spli % 2)
+		})
+	end
+	splObject:Solve()
+end
+
+function DisengageTrunkAscentClimb(splHandle, lane)
+	splHandle:SetSplineMode('NoteColumnSplineMode_Disabled')
+			 :SetSubtractSongBeat(false)
+			 :SetReceptorT(0.0)
+			 :SetBeatsPerT(1.0)
+	local splObject = splHandle:GetSpline()
+	splObject:SetSize(splSize)
+	for spli = 1,splSize do
+		splObject:SetPoint(spli, {
+			0,
+			0,
+			0
+		})
+	end
+	splObject:Solve()
+end
+
+
+_FG_[#_FG_ + 1] = Def.ActorFrame {
+	InitCommand = function(self)
+		trunkascentAuxActor = self
+		self:aux(0)
+	end,
+
+	ShowTrunkAscentMessageCommand = function(self, args)
+		local tweenTime 	= (args and (#args >= 1) and args[1]) or 0
+
+		if treesFrame then
+			treesFrame:visible(1)
+		end
+		for pn=1,2 do
+			for lane=1,4 do
+				if pathActors[pn][lane] then					
+					EngageTrunkAscentClimb(pathActors[pn][lane][2], lane, treePlace[1], treePlace[3])
+				end
+			end
+		end
+			
+		if tweenTime > EPS then
+			self:decelerate(tweenTime / BPS)
+		end
+		self:aux(1)
+	end,
+	HideTrunkAscentMessageCommand = function(self, args)
+		local tweenTime 	= (args and (#args >= 1) and args[1]) or 0
+
+		if tweenTime > EPS then
+			self:accelerate(tweenTime / BPS)
+		end
+		self:aux(0)
+			:queuecommand('HideForestscape2')
+	end,
+	HideTrunkAscent2Command = function(self)	
+		if treesFrame then
+			treesFrame:visible(0)
+		end
+		for pn=1,2 do
+			for lane=1,4 do
+				if pathActors[pn][lane] then					
+					DisengageTrunkAscentClimb(pathActors[pn][lane][2], lane, 0, 0)
+				end
+			end
+		end
+	end,
+}
+--
+--		Climb a tree I guess
+--
+-------------------------------------------------------------------------------
+
 
 
 -------------------------------------------------------------------------------
@@ -627,76 +765,12 @@ local messageList = {
 	-- [1]: beat number to issue message on
 	-- [2]: message title
 	-- [3]: optional table of arguments passed to message
+
+	{  0.10, "RecenterProxy"},	
 	
 	{  0.00, "HideForestscape"},	
-	{  16.00, "ShowForestscape", {8.0}},
-	{  48.00, "HideForestscape", {8.0}},
-	{  0.10, "RecenterProxy"},	
-	{  0.00, "GhostDiffuse", {0.1}},
-	{  0.00, "GhostProxiesOff"},	
-	{  8.00, "GradientChange", {Gradient_HorizontalSpread}},	
-	{  8.00, "StartTrail"},
-	
-	{240.00, "HideBG", {16}},
-	{240.00, "GhostDiffuse", {0.3, 64}},
-	{242.00, "GhostProxiesPulse"},
-	{246.00, "GhostProxiesPulse"},
-	{250.00, "GhostProxiesPulse"},
-	{254.00, "GhostProxiesPulse"},
-	{258.00, "GhostProxiesPulse"},
-	{262.00, "GhostProxiesPulse"},
-	{266.00, "GhostProxiesPulse"},
-	{270.00, "GhostProxiesPulse"},
-	{274.00, "GhostProxiesPulse"},
-	{278.00, "GhostProxiesPulse"},
-	{282.00, "GhostProxiesPulse"},
-	{286.00, "GhostProxiesPulse"},
-	{290.00, "GhostProxiesPulse"},
-	{294.00, "GhostProxiesPulse"},
-	{298.00, "GhostProxiesPulse"},
-	{303.00, "GhostProxiesOn"},
-	
-	{311.00, "GhostProxiesOff"},
-	{312.00, "GhostProxiesOn"},
-	{312.00, "GradientChange", {Gradient_Drip}},
-	{312.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
-	{314.00, "GradientChange", {Gradient_DripRev}},
-	{314.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
-	{327.00, "GhostProxiesOff"},
-	{328.00, "GhostProxiesOn"},
-	{328.00, "GradientChange", {Gradient_DripRev}},
-	{328.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
-	{330.00, "GradientChange", {Gradient_Drip}},
-	{330.50, "GradientChange", {Gradient_HorizontalSpread, 1.5}},
-	{332.00, "GradientChange", {Gradient_Expand, 12}},
-	{343.00, "GhostProxiesOff"},
-	{344.00, "GhostProxiesOn"},
-	{351.00, "GhostProxiesOff"},
-	{351.00, "GradientChange", {Gradient_Expand, 1}},
-	{352.00, "GhostProxiesOn"},
-	{352.00, "GradientChange", {Gradient_Drip}},
-	{353.00, "GradientChange", {Gradient_Expand, 1}},
-	{354.00, "GradientChange", {Gradient_DripRev}},
-	{355.00, "GradientChange", {Gradient_Expand, 1}},
-	{356.00, "GradientChange", {Gradient_Drip}},
-	{356.75, "GradientChange", {Gradient_Expand, 3.25}},
-	{363.50, "GradientChange", {Gradient_DripRev}},
-		
-	{368.00, "GhostProxiesOff"},
-	{368.00, "GhostDiffuse", {0.4, 7}},
-	{368.00, "GradientChange", {Gradient_Gack, 7}},	
-	{375.00, "FateHello"},	
-	{376.00, "GhostProxiesOn"},
-	
-	{496.00, "FateGoodbye"},	
-	{496.00, "GhostDiffuse", {0.0, 32}},	
-	{496.00, "GhostProxiesOff"},	
-	{524.00, "StopTrail"},	
-	{526.00, "StartTrail"},	
-	{528.00, "GhostDiffuse", {0.5}},
-	{528.00, "GhostProxiesOn"},
-	{528.00, "ShowBG", {4}},
-	{536.00, "GhostDiffuse", {0.0, 4}},
+	{300.00, "ShowForestscape", {8.0}},
+	{316.00, "HideForestscape", {8.0}},
 }
 
 --
@@ -887,7 +961,7 @@ function gfxUpdateFunction()
 		end
 	end
 
-	if PlayerTreeView then
+	if forestscapeParam > EPS then
 		for pn = 1,2 do
 			PlayerFullFrames[pn]:rotationx(-90 * forestscapeParam)
 					  			:zoomx(1.0 + forestscapeParam * 0.5)
@@ -923,6 +997,80 @@ function gfxUpdateFunction()
 
 	--
 	--	Perframing: forest scape
+	--
+	-------------------------------------------------------------------------------	
+
+
+
+	-------------------------------------------------------------------------------	
+	--
+	--	Perframing: trunk ascent
+	--
+
+	local trunkascentParam = trunkascentAuxActor:getaux()
+
+	local ppz = 1.0 + treeZExtend
+	if treesFrame then
+		-- Preserve base rotation for the landscape only.
+		treesFrame:rotationy(forestscapeParam * (math.sin(vt * PI / 17.0) * 10.0) + 0.0)
+				  :rotationx(forestscapeParam * (math.sin(vt * PI / 13.0) * 5.0) + 15.0)
+				  :xy(sw * 0.5, sh * (3.0 - 1.8 * forestscapeParam))
+				  
+		for ti = 1,#trees do
+			if trees[ti][1] then
+				local vx = trees[ti][2]
+				local vy = trees[ti][3]
+				local vz = 1.0 - math.fmod(vt / 4.0 - trees[ti][4] - treeZExtend + ppz, ppz)
+				trees[ti][1]:xy(vx * treePlace[1], vy * -treePlace[2])
+							:z(vz * treePlace[3])
+							:diffusealpha(forestscapeParam * math.sqrt(RangeScale(vz, -treeZExtend, 1.0, 1.0, 0.1)))
+			end
+		end
+		for hi = 1,#hills do
+			if hills[hi][1] then
+				local vz = 1.0 - math.fmod(vt / 8.0 - hills[hi][2] - treeZExtend + ppz, ppz)
+				hills[hi][1]:z(vz * treePlace[3])
+							:diffusealpha(forestscapeParam)
+			end
+		end
+	end
+
+	if forestscapeParam > EPS then
+		for pn = 1,2 do
+			PlayerFullFrames[pn]:rotationx(-90 * forestscapeParam)
+					  			:zoomx(1.0 + forestscapeParam * 0.5)
+					  			:zoomy(1.0 + forestscapeParam * 1.0)
+					  			:zoomz(1.0 + forestscapeParam * 0.5)
+					  			:z(forestscapeParam * treePlace[3])
+			--Trace('### plr '..pn..': RX = '..plr[pn]:GetRotationX()..', RY = '..plr[pn]:GetRotationY()..', RZ = '..plr[pn]:GetRotationZ())
+
+			for lane = 1,4 do
+				-- Dial in or out on the "confusionoffsetx".
+				-- Separate from arrow pathing but uses some common objects.
+				if pathActors[pn][lane] then
+					local splRotHdl = pathActors[pn][lane][3]
+					local splRotObj = splRotHdl:GetSpline()
+					splRotHdl:SetSplineMode('NoteColumnSplineMode_Offset')
+							 :SetBeatsPerT(1)
+					splRotObj:SetSize(2)
+							 :SetPoint(1, {forestscapeParam * PI/2, 0, 0})
+							 :SetPoint(2, {forestscapeParam * PI/2, 0, 0})
+							 :Solve()
+
+					pathActors[pn][lane][1]:diffusealpha(forestscapeParam)
+				end
+			end
+		end
+
+		backplate:diffusealpha(forestscapeParam * 0.5)
+
+		-- Don't preserve base rotation for the forestscape player container.
+		PlayerTreeView:rotationy(forestscapeParam * (math.sin(vt * PI / 17.0) * 10.0 - 0.0))
+			  		  :rotationx(forestscapeParam * (math.sin(vt * PI / 13.0) * 5.0 + 30.0))
+	end
+
+	--
+	--	Perframing: trunk ascent
 	--
 	-------------------------------------------------------------------------------	
 	
@@ -1034,6 +1182,11 @@ modsTable = {
 --		{   0.0,	"Flip",				 -0.1,    8.0,	3}, 
 		{   0.0,	"Sudden",			  0.9,    8.0,	3}, 
 		{   0.0,	"SuddenOffset",		  2.0,    8.0,	3}, 
+
+		{ 191.0, 	"Reverse",			  1.0,	  1.0,  1},
+		{ 253.0, 	"Reverse", 			  0.0,	  2.5,	1},
+		{ 382.0, 	"Reverse", 			  1.0,	  2.0,	2},
+		{ 444.0, 	"Reverse", 			  0.0,	  3.0,	2},
 }
 modsTable = SortModsTable(modsTable)
 _FG_[#_FG_ + 1] = LoadActor("./modsHQ.lua", {modsTable, 0})

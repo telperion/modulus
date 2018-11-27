@@ -279,6 +279,20 @@ function PalettePicker(paletteStyle, paletteSeed)
 end
 
 
+--s/o to BrotherMojo
+function mindf_reverseRotation(angleX, angleY, angleZ)
+	local sinX = math.sin(angleX);
+	local cosX = math.cos(angleX);
+	local sinY = math.sin(angleY);
+	local cosY = math.cos(angleY);
+	local sinZ = math.sin(angleZ);
+	local cosZ = math.cos(angleZ);
+	return { math.atan2(-cosX*sinY*sinZ-sinX*cosZ,cosX*cosY),
+			 math.asin(-cosX*sinY*cosZ+sinX*sinZ),
+			 math.atan2(-sinX*sinY*cosZ-cosX*sinZ,cosY*cosZ) }
+end
+
+
 
 function SortModsTable(mt)
 	-- Insertion sort into the butt
