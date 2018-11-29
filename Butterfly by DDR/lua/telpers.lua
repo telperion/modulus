@@ -26,6 +26,59 @@ telp.clamp = function(t, tLo, tHi)
 	end
 end
 
+-- telp.HSV2RGB()
+--
+-- receives: 3-element table
+--		[1]:	hue, 0.0 to 1.0 -> 0 to 360 degrees
+--		[2]:	sat, 0.0 to 1.0 -> fullscale saturation
+--		[3]:	val, 0.0 to 1.0 -> fullscale value
+--
+-- returns: 3-element table
+--		[1]:	red 	0.0 to 1.0 -> fullscale
+--		[2]:	green	0.0 to 1.0 -> fullscale
+--		[3]:	blue	0.0 to 1.0 -> fullscale
+--
+--
+telp.HSV2RGB = function(hsv)
+	rgbTemp = {0, 0, 0}
+
+	hueScale = ((hsv[1] % 1.0)*6.0 + 6.0) % 6.0
+	if     hueScale < 1 then
+      rgbTemp[1] = 1.0
+      rgbTemp[2] = hueScale % 1.0
+      rgbTemp[3] = 0.0
+	elseif hueScale < 2 then
+      rgbTemp[1] = 1.0 - (hueScale % 1.0)
+      rgbTemp[2] = 1.0
+      rgbTemp[3] = 0.0
+	elseif hueScale < 3 then
+      rgbTemp[1] = 0.0
+      rgbTemp[2] = 1.0
+      rgbTemp[3] = hueScale % 1.0
+	elseif hueScale < 4 then
+      rgbTemp[1] = 0.0
+      rgbTemp[2] = 1.0 - (hueScale % 1.0)
+      rgbTemp[3] = 1.0
+	elseif hueScale < 5 then
+      rgbTemp[1] = hueScale % 1.0
+      rgbTemp[2] = 0.0
+      rgbTemp[3] = 1.0
+	else --hueScale < 6
+      rgbTemp[1] = 1.0
+      rgbTemp[2] = 0.0
+      rgbTemp[3] = 1.0 - (hueScale % 1.0)
+	end
+
+	rgb = {
+		hsv[3] + (rgbTemp[1] - hsv[3]) * hsv[2],
+		hsv[3] + (rgbTemp[2] - hsv[3]) * hsv[2],
+		hsv[3] + (rgbTemp[3] - hsv[3]) * hsv[2]
+	}
+
+	return rgb
+end
+
+
 --[[
 
 -- THESE ARE DIRECT FROM nITG AND ARE NOT SUITABLE FOR SM5.x
