@@ -20,7 +20,10 @@
 -------------------------------------------------------------------------------
 
 -- Parse arguments.
-modsTable, modsLeadBy = unpack(...)
+local modsTable, modsLeadBy, clearMods = unpack(...)
+modsTable 	= modsTable 	or {}
+modsLeadBy 	= modsLeadBy 	or 0
+clearMods 	= clearMods 	or false
 
 local modsLaunched = 0;
 
@@ -148,7 +151,7 @@ local ClearAllMods = function(playerNum, justTrace)
 	end
 end
 
-local UpdateMods = function()
+local UpdateMods = function(self)
 	-- Most things are determined by beat, believe it or not.		
 	local overtime = GAMESTATE:GetSongBeat();
 	
@@ -205,8 +208,10 @@ end
 return Def.ActorFrame {
 	Name = "ModsHQ",
 	OnCommand = function(self)
-		clearAllMods(1)
-		clearAllMods(2)
+		if clearMods then
+			clearAllMods(1)
+			clearAllMods(2)
+		end
 		self:SetUpdateFunction(UpdateMods)
 	end
 }

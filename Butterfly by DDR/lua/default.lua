@@ -16,14 +16,31 @@
 local G = {}
 G.W = SCREEN_WIDTH
 G.H = SCREEN_HEIGHT
+G.BPS = GAMESTATE:GetSongBPS()
+G.T = 0
+G.T_offset = 0
+G.msg = 0
+G.P = {}
 
+-- Load helpful support functions and constants.
 local whereTheFlipAmI = GAMESTATE:GetCurrentSong():GetSongDir()
 dofile(whereTheFlipAmI .. 'lua/telpers.lua')
 
-_FG_ = Def.ActorFrame {
-	OnCommand = function(self)
+-- Keep-alive and super global initializations happen here.
+local _FG_ = Def.ActorFrame {
+	BeginCommand = function(self)
 		self:SetDrawByZPosition(true)
 			:SetFOV(45)
+
+		G.P[1] = SCREENMAN:GetTopScreen():GetChild('PlayerP1')
+		G.P[2] = SCREENMAN:GetTopScreen():GetChild('PlayerP2')
+
+		for pn = 1,2 do
+			if G.P[pn] then
+				G.P[pn]:visible(false)
+				G.P[pn]:GetChild("Judgment"):visible(false)
+			end
+		end
 	end,
 	Def.Actor { 
 		Name = "slep",
@@ -32,6 +49,88 @@ _FG_ = Def.ActorFrame {
 		end
 	}	
 }
+
+-- Set up proxies!
+local prox = {
+	{},					-- Multiples allowed!
+	{},					-- For both players.
+}
+local proxJud = {}		-- There'll only be two of these.
+
+
+for pn = 1,2 do
+	local pnLoc = pn
+	_FG_[#_FG_ + 1] = Def.ActorProxy {
+		Name = "ProxyP"..pnLoc,
+		InitCommand = function(self)				
+			prox[pnLoc][1] = self
+			self:AddWrapperState()
+			self:AddWrapperState()
+		end,
+		BeginCommand = function(self)
+			if G.P[pnLoc] then
+				self:SetTarget(G.P[pnLoc])
+				Trace("### Player proxy for P"..pnLoc.." target set!")
+			else
+				--self:hibernate(1573)
+				Trace("### Player proxy for P"..pnLoc.." not needed!")
+			end
+		end,
+		OnCommand = function(self)
+			if G.P[pnLoc] then
+				self:z(4)
+				self:GetWrapperState(1)					-- Encase in a wrapper state that cancels out the original position.
+					:xy(-self:GetTarget():GetX(), -self:GetTarget():GetY())
+				self:GetWrapperState(2)					-- Then encase in a wrapper state that can be individually moved as desired.
+					:xy(G.W*(0.5*pnLoc - 0.25), G.H*0.5)
+				Trace("### Player proxy for P"..pnLoc.." location set! (X = "..self:GetTarget():GetX()..", Y = "..self:GetTarget():GetY()..")")
+			else
+				Trace("### Player proxy for P"..pnLoc.." location update not needed!")
+			end
+		end,
+		RecenterProxyMessageCommand = function(self)
+			if G.P[pnLoc] then
+				self:GetWrapperState(1)
+					:xy(-self:GetTarget():GetX(), -self:GetTarget():GetY())			
+				Trace("### Player proxy for P"..pnLoc.." location recentered! (X = "..self:GetTarget():GetX()..", Y = "..self:GetTarget():GetY()..")")		
+			else
+				Trace("### Player proxy for P"..pnLoc.." location update not needed!")
+			end
+		end,
+	}
+
+	_FG_[#_FG_ + 1] = Def.ActorProxy {
+		Name = "JudgeProxyP"..pnLoc,
+		InitCommand = function(self)				
+			proxJud[pnLoc] = self
+			self:AddWrapperState()
+			self:AddWrapperState()
+		end,
+		BeginCommand = function(self)
+			if G.P[pnLoc] then
+				self:SetTarget(G.P[pnLoc]:GetChild("Judgment"))
+				Trace("### Judgment proxy for P"..pnLoc.." target set!")
+			else
+				--self:hibernate(1573)
+				Trace("### Judgment proxy for P"..pnLoc.." not needed!")
+			end
+		end,
+		OnCommand = function(self)
+			if G.P[pnLoc] then
+				self:z(5)
+				self:GetWrapperState(1)					-- Encase in a wrapper state that cancels out the original position.
+					:xy(-self:GetTarget():GetX(), -self:GetTarget():GetY())
+				self:GetWrapperState(2)					-- Then encase in a wrapper state that can be individually moved as desired.
+					:xy(G.W*(0.6*pnLoc - 0.4), G.H*0.5)
+					:zoom(0.7)							-- Judgment doesn't need to be that big lol
+				Trace("### Judgment proxy for P"..pnLoc.." location set!")
+			else
+				Trace("### Judgment proxy for P"..pnLoc.." location update not needed!")
+			end
+		end,
+	}
+end
+
 
 -- _FG_[#_FG_ + 1] = LoadActor('./diagnostic.lua')
 -- _FG_[#_FG_]["OnCommand"] = function(self)
@@ -136,7 +235,7 @@ _TN_ = {
 	    return {
 	    	self.ll*math.sin(self.ph)*math.cos(self.th),
 	    	self.ll*math.cos(self.ph),
-	    	self.ll*math.sin(self.ph)*math.sin(self.th)
+	    	self.ll*math.sin(self.ph)*math.sin(self.th) * treeMeta.zScale
 	    }
 	end,
 
@@ -154,12 +253,13 @@ _TN_ = {
 trees = {}
 treeMeta = {
 	nTrees = 12,
-	maxTreeSize = 300,
+	maxTreeSize = 150,
 	maxTreeGen = 6,
 	fullScale = math.min(G.W, G.H) * 0.6,
+	zScale = 0.01,
 }
 treeMeta.leafSize = treeMeta.fullScale*0.05
-treeMeta.trunkThk = treeMeta.fullScale*0.01
+treeMeta.trunkThk = treeMeta.fullScale*0.03
 
 for i = 1,treeMeta.nTrees do
 	trees[i] = {_TN_:new()}
@@ -281,8 +381,93 @@ end
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 --]]
 
-for i = 1,1 do
+for i = 1,2 do
 	treeMeta.Plant(i)
+end
+
+for i = 1,2 do
+	for j = 2,#trees[i] do 		-- We don't need to draw the root; start from index 2
+		local nodeCoord = trees[i][j]:FullCoord(trees[i]):Perturb():ToCartesian()
+		local LCoords = {}
+		local TCoords = {}
+
+		-- Draw leaves as leaves.
+		if trees[i][j].leaf then
+			LCoords = {
+				{
+					{nodeCoord[1], -nodeCoord[2], 0.0},
+					{0.0, 1.0, 0.0, 1.0},
+					{0.0, 0.0}
+				},
+				{
+					{nodeCoord[1]-treeMeta.leafSize*math.sqrt(1/1.5), -nodeCoord[2]+treeMeta.leafSize*0.5, 0.0},
+					{0.0, 1.0, 1.0, 1.0},
+					{0.0, 1.0}
+				},
+				{
+					{nodeCoord[1], -nodeCoord[2]+treeMeta.leafSize, 0.0},
+					{1.0, 0.0, 1.0, 1.0},
+					{1.0, 1.0}
+				},
+				{
+					{nodeCoord[1]+treeMeta.leafSize*math.sqrt(1/1.5), -nodeCoord[2]+treeMeta.leafSize*0.5, 0.0},
+					{1.0, 1.0, 0.0, 1.0},
+					{1.0, 0.0}
+				},
+			}
+
+			_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
+				InitCommand = function(self)
+					self:xy(G.W*(0.3*i - 0.25), G.H*0.8)
+						:z(0.01+nodeCoord[3])
+						:SetVertices(LCoords)
+						:SetDrawState({
+							Mode = "DrawMode_Quads",
+							First = 1,
+							Num = -1
+							})
+				end
+			}
+		end
+
+		-- Draw connecting branch.
+		local fromCoord = trees[i][trees[i][j].from]:FullCoord(trees[i]):Perturb():ToCartesian()
+		local branchTaper = trees[i][j].leaf and 0 or 1
+		TCoords = {
+			{
+				{nodeCoord[1]-treeMeta.trunkThk*0.5*branchTaper, -nodeCoord[2], 0.0},
+				{0.2, 0.1, 0.0, 0.9},
+				{0.0, 0.0}
+			},
+			{
+				{nodeCoord[1]+treeMeta.trunkThk*0.5*branchTaper, -nodeCoord[2], 0.0},
+				{0.2, 0.1, 0.0, 0.9},
+				{0.0, 1.0}
+			},
+			{
+				{fromCoord[1]+treeMeta.trunkThk*0.5, -fromCoord[2], fromCoord[3]-nodeCoord[3]},
+				{0.2, 0.0, 0.0, 0.7},
+				{1.0, 1.0}
+			},
+			{
+				{fromCoord[1]-treeMeta.trunkThk*0.5, -fromCoord[2], fromCoord[3]-nodeCoord[3]},
+				{0.2, 0.0, 0.0, 0.7},
+				{1.0, 0.0}
+			},
+		}
+		_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
+			InitCommand = function(self)
+				self:xy(G.W*(0.3*i - 0.25), G.H*0.8)
+					:z(nodeCoord[3])
+					:SetVertices(TCoords)
+					:SetDrawState({
+						Mode = "DrawMode_Quads",
+						First = 1,
+						Num = -1
+						})
+			end
+		}
+	end
 end
 
 
@@ -291,30 +476,30 @@ end
 for i = 0,20 do
 	local QCoords = {
 		{
-			{-0.8*G.W, -0.8*G.H, 0},
-			{0.0, 0.0, 1.0, 0.3},
+			{-0.6*G.W, -0.6*G.H, 0},
+			{0.0, 0.7, 0.5, i*0.01},
 			{0.0, 0.0}
 		},
 		{
-			{ 0.8*G.W, -0.8*G.H, 0},
-			{0.0, 1.0, 0.0, 0.2},
+			{ 0.6*G.W, -0.6*G.H, 0},
+			{0.0, 0.7, 0.5, i*0.01},
 			{1.0, 0.0}
 		},
 		{
-			{ 0.8*G.W,  0.8*G.H, 0},
-			{1.0, 0.0, 0.0, 0.1},
+			{ 0.6*G.W,  0.6*G.H, 0},
+			{0.0, 0.3, 0.0, i*0.05},
 			{1.0, 1.0}
 		},
 		{
-			{-0.8*G.W,  0.8*G.H, 0},
-			{0.5, 0.5, 0.5, 0.0},
+			{-0.6*G.W,  0.6*G.H, 0},
+			{0.0, 0.3, 0.0, i*0.05},
 			{0.0, 1.0}
 		},
 	}
 	_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
 		InitCommand = function(self)
 			self:xy(G.W*0.5, G.H*0.5)
-				:z(i*50 - 500)
+				:z(-0.5*i + 5)
 				:SetVertices(QCoords)
 				:SetDrawState({
 					Mode = "DrawMode_Quads",
@@ -343,22 +528,88 @@ for i = 1,20 do
 			self:SetDrawByZPosition(true)
 				:SetFOV(45)
 				:rotationy(iDir * 180 / math.pi)
-				:z(500)
-				:xy(G.W * (0.5 - 0.7*math.tan(iDir)), G.H * (1.0 + 0.2*math.random()))
+				:z(5)
+				:xy(G.W * (0.5 - 0.7*math.tan(iDir)), G.H * (1.2 + 0.2*math.random()))
 
 			self:sleep(iDelay)
 				:queuecommand("FlyAway")		
 		end,
 		FlyAwayCommand = function(self)
 			self:accelerate(iSpeed)
-				:xy(G.W * (0.5 + 0.7*math.tan(iDir)), G.H * (0.0 - 0.5*math.random()))
-				:z(-500)
+				:xy(G.W * (0.5 + 0.7*math.tan(iDir)), G.H * (-0.2 - 0.2*math.random()))
+				:zoom(0.5)
+				:z(-5)
 		end
 	}
 end
 
 
+
+--[[
+##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+-- this is where the shit will be happening
+##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+--]]
+
+local messageList = {
+	-- [1]: beat number to issue message on
+	-- [2]: message title
+	-- [3]: optional table of arguments passed to message
+
+--	{  0.00, "RecenterProxy"},
+}
+
+-- Time-based effects.
+function ButtUpdate(self)
+	-- Most things are determined by beat, believe it or not.		
+	G.T = GAMESTATE:GetSongBeat() + G.T_offset
+	
+	-- TODO: this assumes the effect applies over a constant BPM section!!
+	G.BPS = GAMESTATE:GetSongBPS()
+			
+	-- Broadcast messages on their own terms.
+	while true do
+		if G.msg < #messageList then
+			local messageBeat, messageName, messageArgs = unpack(messageList[G.msg+1])
+			if G.T >= messageBeat then			
+				if messageArgs then
+					MESSAGEMAN:Broadcast( messageName, messageArgs )
+				else
+					MESSAGEMAN:Broadcast( messageName )
+				end
+				
+				G.msg = G.msg + 1
+			else
+				break;
+			end
+		else
+			break;
+		end
+	end
+end
+_FG_[#_FG_ + 1] = Def.ActorFrame {
+	Name = "Timekeeper",
+	InitCommand = function(self)
+		self:SetUpdateFunction(ButtUpdate)
+	end,
+}
+
+
 -- Load the HUD reducer into this script.
 _FG_[#_FG_ + 1] = LoadActor("./hudreducer.lua")
+
+-- Load the mods table parser into this script.
+niceSpeed = (420 + 69) / 145			-- This song is 145 BPM.
+modsTable = {
+	-- [1]: beat start
+	-- [2]: mod type
+	-- [3]: mod strength (out of unity),
+	-- [4]: mod approach (in beats to complete)
+	-- [5]: player application (1 = P1, 2 = P2, 3 = both, 0 = neither)
+		
+--		{   0.0,	"ScrollSpeed",	niceSpeed,    8.0,	3}, 
+		{   0.0,	"Dark",				  0.8,    8.0,	3}, 
+}
+_FG_[#_FG_ + 1] = LoadActor("./modsHQ.lua", {modsTable, 0.009, false})
 
 return _FG_
