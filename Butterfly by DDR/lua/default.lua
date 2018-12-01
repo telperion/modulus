@@ -20,6 +20,7 @@ G.BPS = GAMESTATE:GetSongBPS()
 G.T = 0
 G.T_offset = 0
 G.msg = 0
+G.per = 0
 G.P = {}
 
 -- Load helpful support functions and constants.
@@ -159,29 +160,62 @@ end
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 --]]
 
+trees = {}
+treeMeta = {
+	nTrees = 12,
+	maxTreeSize = 150,
+	maxTreeGen = 6,
+	fullScale = math.min(G.W, G.H) * 0.6,
+	zScale = 0.01,
+}
+treeMeta.leafSize = treeMeta.fullScale*0.05
+treeMeta.trunkThk = treeMeta.fullScale*0.03
+treeActors = {}
 
-perturbances = {
+
+_PTBN_ = {
 	spreadin = 0,	-- 0: perturbance of phi, degrees
 	rotation = 0,	-- 1: perturbance of theta, degrees
 	lengthen = 0,	-- 2: perturbance of length, proportion of full-scale
 	coloring = 0,	-- 3: perturbance of leaf color
 	unfurled = 0,	-- 4: perturbance to fold phi, proportion of full-scale
+
+	new = function(self, o)
+		local ptbn = {}
+		setmetatable(ptbn, self)
+		self.__index = self
+
+	    ptbn.spreadin = o and o.spreadin or 0
+	    ptbn.rotation = o and o.rotation or 0
+	    ptbn.lengthen = o and o.lengthen or 0
+	    ptbn.coloring = o and o.coloring or 0
+	    ptbn.unfurled = o and o.unfurled or 0
+
+	    return ptbn
+	end,
 }
+
+perturbances = {}
+for i = 1,treeMeta.nTrees do
+	perturbances[i] = _PTBN_:new()
+end
 
 
 
 _TN_ = {
-	from = -1,
-	ph = 0,
-	th = 0,
-	ll = 0,
-	leaf = true,
+	whom = -1,		-- which tree this node belongs to (ick!)
+	from = -1,		-- which node index in the tree node list *this* node grew from
+	ph = 0,			-- phi, elevation/spreading parameter
+	th = 0,			-- theta, azimuthal/rotation parameter
+	ll = 0,			-- length of branch to this node
+	leaf = true,	-- am I a leaf?? who the henk know
 
 	new = function(self, o)
 		local tn = {}
 		setmetatable(tn, self)
 		self.__index = self
 
+	    tn.whom = o and o.whom 	or -1
 	    tn.from = o and o.from 	or -1
 	    tn.ph 	= o and o.ph 	or 0
 	    tn.th 	= o and o.th 	or 0
@@ -193,10 +227,11 @@ _TN_ = {
 
 	Perturb = function(self)
 		local ret = _TN_:new()
+		local ptbn = (self.whom > 0) and perturbances[self.whom] or _PTBN_:new()
 
-	    ret.ph = (self.ph + perturbances.spreadin*math.pi/180) * (1.0 - perturbances.unfurled)
-	    ret.th =  self.th + perturbances.rotation*math.pi/180
-	    ret.ll =  self.ll * (1.0 + perturbances.lengthen)
+	    ret.ph = (self.ph + ptbn.spreadin*DEG_TO_RAD) * (1.0 - ptbn.unfurled)
+	    ret.th =  self.th + ptbn.rotation*DEG_TO_RAD
+	    ret.ll =  self.ll * (1.0 + ptbn.lengthen)
 	    return ret
 	end,
   
@@ -250,19 +285,11 @@ _TN_ = {
 
 
 
-trees = {}
-treeMeta = {
-	nTrees = 12,
-	maxTreeSize = 150,
-	maxTreeGen = 6,
-	fullScale = math.min(G.W, G.H) * 0.6,
-	zScale = 0.01,
-}
-treeMeta.leafSize = treeMeta.fullScale*0.05
-treeMeta.trunkThk = treeMeta.fullScale*0.03
 
 for i = 1,treeMeta.nTrees do
 	trees[i] = {_TN_:new()}
+	trees[i][1].whom = i
+	treeActors[i] = {}
 end
 
 
@@ -327,6 +354,7 @@ treeMeta.Growth = function(treeIndex, gen)
 			for j = 1,buds do
 				x = x + 1
 				trees[treeIndex][x] = _TN_:new({
+					whom = treeIndex,
 					from = i,
 					ph = treePDF.phi({zo = parPhi}),
 					th = treePDF.the({zo = parThe, buds = buds, budIndex = j}),
@@ -381,96 +409,89 @@ end
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 --]]
 
-for i = 1,2 do
+for i = 1,3 do
 	treeMeta.Plant(i)
 end
 
-for i = 1,2 do
-	for j = 2,#trees[i] do 		-- We don't need to draw the root; start from index 2
-		local nodeCoord = trees[i][j]:FullCoord(trees[i]):Perturb():ToCartesian()
-		local LCoords = {}
-		local TCoords = {}
+function CalculateTreePositions(setupOnce)
+	setupOnce = setupOnce or false	-- ONLY CALL WITH THIS PARAMETER ONCE!
 
-		-- Draw leaves as leaves.
-		if trees[i][j].leaf then
-			LCoords = {
-				{
-					{nodeCoord[1], -nodeCoord[2], 0.0},
+	for i = 1,treeMeta.nTrees do		
+		for j = 2,#trees[i] do 		-- We don't need to draw the root; start from index 2
+			local nodeCoord = trees[i][j]:FullCoord(trees[i]):Perturb():ToCartesian()
+			local TCoords = {}
+
+			-- Draw leaves as leaves.
+			if trees[i][j].leaf then
+				TCoords[#TCoords + 1] =	{
+					{nodeCoord[1], -nodeCoord[2]-treeMeta.leafSize*0.5, 0.001},
 					{0.0, 1.0, 0.0, 1.0},
 					{0.0, 0.0}
-				},
-				{
-					{nodeCoord[1]-treeMeta.leafSize*math.sqrt(1/1.5), -nodeCoord[2]+treeMeta.leafSize*0.5, 0.0},
+				}
+				TCoords[#TCoords + 1] =	{
+					{nodeCoord[1]-treeMeta.leafSize*math.sqrt(1/1.5), -nodeCoord[2], 0.001},
 					{0.0, 1.0, 1.0, 1.0},
 					{0.0, 1.0}
-				},
-				{
-					{nodeCoord[1], -nodeCoord[2]+treeMeta.leafSize, 0.0},
+				}
+				TCoords[#TCoords + 1] =	{
+					{nodeCoord[1], -nodeCoord[2]+treeMeta.leafSize*0.5, 0.001},
 					{1.0, 0.0, 1.0, 1.0},
 					{1.0, 1.0}
-				},
-				{
-					{nodeCoord[1]+treeMeta.leafSize*math.sqrt(1/1.5), -nodeCoord[2]+treeMeta.leafSize*0.5, 0.0},
+				}
+				TCoords[#TCoords + 1] =	{
+					{nodeCoord[1]+treeMeta.leafSize*math.sqrt(1/1.5), -nodeCoord[2], 0.001},
 					{1.0, 1.0, 0.0, 1.0},
 					{1.0, 0.0}
-				},
-			}
+				}
+			end
 
-			_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
-				InitCommand = function(self)
-					self:xy(G.W*(0.3*i - 0.25), G.H*0.8)
-						:z(0.01+nodeCoord[3])
-						:SetVertices(LCoords)
-						:SetDrawState({
-							Mode = "DrawMode_Quads",
-							First = 1,
-							Num = -1
-							})
-				end
-			}
-		end
-
-		-- Draw connecting branch.
-		local fromCoord = trees[i][trees[i][j].from]:FullCoord(trees[i]):Perturb():ToCartesian()
-		local branchTaper = trees[i][j].leaf and 0 or 1
-		TCoords = {
-			{
+			-- Draw connecting branch.
+			local fromCoord = trees[i][trees[i][j].from]:FullCoord(trees[i]):Perturb():ToCartesian()
+			local branchTaper = trees[i][j].leaf and 0 or 1
+			TCoords[#TCoords + 1] =	{
 				{nodeCoord[1]-treeMeta.trunkThk*0.5*branchTaper, -nodeCoord[2], 0.0},
 				{0.2, 0.1, 0.0, 0.9},
 				{0.0, 0.0}
-			},
-			{
+			}
+			TCoords[#TCoords + 1] =	{
 				{nodeCoord[1]+treeMeta.trunkThk*0.5*branchTaper, -nodeCoord[2], 0.0},
 				{0.2, 0.1, 0.0, 0.9},
 				{0.0, 1.0}
-			},
-			{
+			}
+			TCoords[#TCoords + 1] =	{
 				{fromCoord[1]+treeMeta.trunkThk*0.5, -fromCoord[2], fromCoord[3]-nodeCoord[3]},
 				{0.2, 0.0, 0.0, 0.7},
 				{1.0, 1.0}
-			},
-			{
+			}
+			TCoords[#TCoords + 1] =	{
 				{fromCoord[1]-treeMeta.trunkThk*0.5, -fromCoord[2], fromCoord[3]-nodeCoord[3]},
 				{0.2, 0.0, 0.0, 0.7},
 				{1.0, 0.0}
-			},
-		}
-		_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
-			InitCommand = function(self)
-				self:xy(G.W*(0.3*i - 0.25), G.H*0.8)
-					:z(nodeCoord[3])
-					:SetVertices(TCoords)
-					:SetDrawState({
-						Mode = "DrawMode_Quads",
-						First = 1,
-						Num = -1
-						})
+			}
+
+			if setupOnce then
+				_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
+					InitCommand = function(self)
+						treeActors[i][j-1] = self
+					end
+				}
 			end
-		}
+
+			if treeActors[i][j-1] then
+				treeActors[i][j-1]	:xy(G.W*(0.3*i - 0.25), G.H*0.8)
+									:z(nodeCoord[3])
+									:SetVertices(TCoords)
+									:SetDrawState({
+										Mode = "DrawMode_Quads",
+										First = 1,
+										Num = -1
+										})
+			end
+		end
 	end
 end
 
-
+CalculateTreePositions(true)	-- ONLY CALL WITH THIS PARAMETER ONCE!!
 
 
 for i = 0,20 do
@@ -551,12 +572,45 @@ end
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 --]]
 
+perframes = {
+	PerturbTrees = function(t)		
+		for i = 1,treeMeta.nTrees do
+			perturbances[i].spreadin = 1 * math.cos(2*PI*G.T)
+			perturbances[i].rotation = 6 * math.sin(2*PI*G.T / 16)
+			perturbances[i].lengthen = 0
+		end		
+	end,
+	ColorTrees = function(t, p)
+		ind = p.ind or -1
+		rev = p.rev or false
+
+		if ind > 0 then
+			perturbances[ind].coloring = rev and t or 1-t
+		else
+			for i=1,treeMeta.nTrees do
+				perturbances[i].coloring = rev and t or 1-t
+			end
+		end
+	end,
+}
+
 local messageList = {
 	-- [1]: beat number to issue message on
 	-- [2]: message title
 	-- [3]: optional table of arguments passed to message
 
 --	{  0.00, "RecenterProxy"},
+}
+
+local perframeList = {
+	-- [1]: beat number perframe begins on
+	-- [2]: beat number perframe ends on
+	-- [3]: function to execute that accepts progress through this perframe scaled from 0 to 1
+	--		(beat time is still accessible ofc)
+	-- [4]: further parameters to the perframe function
+
+	{  0.00, 512.00, perframes.PerturbTrees }
+
 }
 
 -- Time-based effects.
@@ -566,6 +620,8 @@ function ButtUpdate(self)
 	
 	-- TODO: this assumes the effect applies over a constant BPM section!!
 	G.BPS = GAMESTATE:GetSongBPS()
+
+	CalculateTreePositions()
 			
 	-- Broadcast messages on their own terms.
 	while true do
@@ -586,6 +642,19 @@ function ButtUpdate(self)
 			break;
 		end
 	end
+
+	for pfi = 1,#perframeList do
+		pfParams = perframeList[pfi]
+		if pfParams[1] < G.T and G.T < pfParams[2] then		
+			local pft = telp.clamp(G.T, pfParams[1], pfParams[2])
+			if pfParams[4] then
+				pfParams[3](pft, pfParams[4])
+			else
+				pfParams[3](pft)
+			end
+		end
+	end
+
 end
 _FG_[#_FG_ + 1] = Def.ActorFrame {
 	Name = "Timekeeper",
