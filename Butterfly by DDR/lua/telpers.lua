@@ -97,6 +97,15 @@ if not telp then
 		return x
 	end
 
+	telp.ease = function(t, choice, ts, tf)
+		if ease and ease[choice] then
+			return ease[choice](telp.clamp(t, ts, tf), 0, 1, 1)
+		else
+			Trace('### Easing not loaded, or ease function "'..choice..'" not available!')
+			return 0
+		end
+	end
+
 	--[[
 
 	-- THESE ARE DIRECT FROM nITG AND ARE NOT SUITABLE FOR SM5.x
@@ -309,5 +318,4 @@ if not telp then
 			vec1[2]..', '..
 			vec1[3]..'}')
 	end
-
 end

@@ -42,8 +42,9 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 			hamburger:GetChild("Underlay"):decelerate(1.0 / GAMESTATE:GetSongBPS()):diffusealpha(0.0);
 		end
 				
-		-- Try to set the noteskin to "cyber" for each player.		
+		-- Try to set the noteskin to "cyber" for each player. <- This behavior has been disabled for this file.
 		local hadToSetNoteskin = false;
+		local tryToSetNoteskin = false;
 		local hadToEraseTurnMods = false;
 		for pn,_ in ipairs(playerExpected) do		
 			pops = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn):GetPlayerOptions("ModsLevel_Preferred");
@@ -57,17 +58,19 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 				prevTN5, didItWork = pops:SoftShuffle(false);
 				prevTN6, didItWork = pops:SuperShuffle(false);
 		
-				prevNS1, didItWork = pops:NoteSkin("Cyber");
-				prevNS2, didItWork = pops:NoteSkin("cyber");
-				prevNS3, didItWork = pops:NoteSkin();
-				if prevNS3:lower() ~= "cyber" then
-					-- We couldn't do anything about the noteskin.
-					hadToSetNoteskin = false;
-				elseif prevNS1:lower() ~= "cyber" or
-					   prevNS2:lower() ~= "cyber" then
-					-- We changed the noteskin! 
-					-- But the song needs to be restarted or it won't take.
-					hadToSetNoteskin = true;
+				if tryToSetNoteskin then
+					prevNS1, didItWork = pops:NoteSkin("Cyber");
+					prevNS2, didItWork = pops:NoteSkin("cyber");
+					prevNS3, didItWork = pops:NoteSkin();
+					if prevNS3:lower() ~= "cyber" then
+						-- We couldn't do anything about the noteskin.
+						hadToSetNoteskin = false;
+					elseif prevNS1:lower() ~= "cyber" or
+						   prevNS2:lower() ~= "cyber" then
+						-- We changed the noteskin! 
+						-- But the song needs to be restarted or it won't take.
+						hadToSetNoteskin = true;
+					end
 				end
 				
 				if prevTN1 or prevTN2 or prevTN3 or prevTN4 or prevTN5 or prevTN6 then

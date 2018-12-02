@@ -5,6 +5,7 @@
 --		
 --		Author: 	Telperion
 --		Date: 		2018-11-25
+--		Version:	0.6 -prototype-
 --
 --
 --		A fresh take on a classic song.
@@ -23,6 +24,7 @@ G.msg = 0
 G.exe = 0
 G.per = 0
 G.P = {}
+G.bypass = false
 
 G.Zmax =  5
 G.Zmin = -5
@@ -31,6 +33,7 @@ telp = nil
 
 -- Load helpful support functions and constants.
 local whereTheFlipAmI = GAMESTATE:GetCurrentSong():GetSongDir()
+dofile(whereTheFlipAmI .. 'lua/easing.lua')
 dofile(whereTheFlipAmI .. 'lua/telpers.lua')
 
 -- Keep-alive and super global initializations happen here.
@@ -85,7 +88,7 @@ for pn = 1,2 do
 		end,
 		OnCommand = function(self)
 			if G.P[pnLoc] then
-				self:z(4)
+				self:z(G.Zmin*0.2 + G.Zmax*0.8)
 				self:GetWrapperState(1)					-- Encase in a wrapper state that cancels out the original position.
 					:xy(-self:GetTarget():GetX(), -self:GetTarget():GetY())
 				self:GetWrapperState(2)					-- Then encase in a wrapper state that can be individually moved as desired.
@@ -124,7 +127,7 @@ for pn = 1,2 do
 		end,
 		OnCommand = function(self)
 			if G.P[pnLoc] then
-				self:z(5)
+				self:z(G.Zmax+1)
 				self:GetWrapperState(1)					-- Encase in a wrapper state that cancels out the original position.
 					:xy(-self:GetTarget():GetX(), -self:GetTarget():GetY())
 				self:GetWrapperState(2)					-- Then encase in a wrapper state that can be individually moved as desired.
@@ -169,6 +172,7 @@ treeMeta.leafSize = treeMeta.fullScale*0.05
 treeMeta.trunkThk = treeMeta.fullScale*0.01
 treeActors = {}
 treeCoords = {}
+treeZRec = {}
 treesInit = {}
 
 
@@ -290,6 +294,7 @@ for i = 1,treeMeta.nTrees do
 	trees[i][1].whom = i
 	treeActors[i] = {}			-- leaves, branches
 	treeCoords[i] = {{}, {}}	-- leaves, branches
+	treeZRec[i] = 0
 	treesInit[i] = false
 end
 
@@ -307,7 +312,7 @@ treePDF = {
 
 		zo = zo * gp
 
-			if zo < 0.15 then return 1
+			if zo < 0.10 then return 1
 		elseif zo < 0.30 then return 3
 		elseif zo < 0.70 then return 5
 		else                  return 0
@@ -325,7 +330,7 @@ treePDF = {
 	phi = function(params)
 		local zo = params.zo or 0
 
-		return math.pi / 12 + (zo*zo) * math.pi / 12
+		return math.pi / 12 + (zo*zo) * math.pi / 8
 		-- return math.pi / 6
 	end,
 
@@ -494,6 +499,7 @@ function CalculateTreePositions(setupOnce)
 							Num = -1
 							})
 						:diffuse({0.2, 0.1, 0.0, 0.7})
+						:visible(not G.bypass)
 				end
 			}
 			_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
@@ -508,6 +514,7 @@ function CalculateTreePositions(setupOnce)
 							Num = -1
 							})
 						:diffuse({0.0, 0.5, 0.0, 0.9})
+						:visible(not G.bypass)
 				end
 			}
 		end
@@ -517,15 +524,19 @@ end
 function CalculateTreePositions_Cheap()
 	for i = 1,treeMeta.nTrees do
 		local treeRGB = telp.HSV2RGB({0.3-perturbances[i].coloring*0.3, 1.0, 0.5 + perturbances[i].coloring*0.5})
+		local tZ = telp.clamp(treeZRec[i], G.Zmin, G.Zmax)*1.2+0.5
+		local tA = 1 - telp.clamp(treeZRec[i], G.Zmin*0.1 + G.Zmax*0.9, G.Zmax)*0.8
 		for j = 1,2 do 	-- leaves, branches
 			if treeActors[i][j] then
-				treeActors[i][j]:zoomx((1 + perturbances[i].spreadin * 0.05) * perturbances[i].unfurled)
-								:zoomy(1 - perturbances[i].spreadin * 0.05)
-								:zoomz(1 + perturbances[i].spreadin * 0.05)
+				treeActors[i][j]:zoomx((1 + perturbances[i].spreadin * 0.05) * perturbances[i].unfurled * tZ)
+								:zoomy((1 - perturbances[i].spreadin * 0.05) 							* tZ)
+								:zoomz((1 + perturbances[i].spreadin * 0.05) 							* tZ)
 								:rotationy(perturbances[i].rotation)
 
 				if j == 1 then
-					treeActors[i][j]:diffuse({treeRGB[1], treeRGB[2], treeRGB[3], 0.9})
+					treeActors[i][j]:diffuse({treeRGB[1], treeRGB[2], treeRGB[3], tA})
+				else
+					treeActors[i][j]:diffusealpha(tA)
 				end
 			end
 		end
@@ -534,40 +545,45 @@ end
 
 CalculateTreePositions(true)	-- ONLY CALL WITH THIS PARAMETER ONCE!!
 
-
-for i = 0,20 do
+fogActors = {}
+nFog = 21
+for i = 1,nFog do
+	local iProp = (i-1) / (nFog-1)
 	local QCoords = {
 		{
 			{-0.6*G.W, -0.6*G.H, 0},
-			{0.0, 0.5, 0.3, i*0.01},
+			{0.0, 0.5, 0.3, iProp*0.2},
 			{0.0, 0.0}
 		},
 		{
 			{ 0.6*G.W, -0.6*G.H, 0},
-			{0.0, 0.5, 0.3, i*0.01},
+			{0.0, 0.5, 0.3, iProp*0.2},
 			{1.0, 0.0}
 		},
 		{
 			{ 0.6*G.W,  0.6*G.H, 0},
-			{0.0, 0.1, 0.0, i*0.04},
+			{0.0, 0.1, 0.0, iProp*0.8},
 			{1.0, 1.0}
 		},
 		{
 			{-0.6*G.W,  0.6*G.H, 0},
-			{0.0, 0.1, 0.0, i*0.04},
+			{0.0, 0.1, 0.0, iProp*0.8},
 			{0.0, 1.0}
 		},
 	}
 	_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
 		InitCommand = function(self)
+			fogActors[i] = self
 			self:xy(G.W*0.5, G.H*0.5)
-				:z(-0.5*i + 5)
+				:z(G.Zmax + (G.Zmin-G.Zmax) * iProp)
 				:SetVertices(QCoords)
 				:SetDrawState({
 					Mode = "DrawMode_Quads",
 					First = 1,
 					Num = -1
 					})
+				:diffusealpha(0)
+				:visible(not G.bypass)
 		end
 	}
 end
@@ -575,7 +591,7 @@ end
 
 
 butts = {
-	nButts = 30,
+	nButts = 48,
 	buttActors = {},
 	buttDest = {},
 	buttSpeed = {},
@@ -601,7 +617,7 @@ for iButty = 1,butts.nButts do
 			self:visible(false)
 		end,
 		FlyAwayCommand = function(self)
-			self:visible(true)
+			self:visible(not G.bypass)
 				:accelerate(butts.buttSpeed[iButty] / G.BPS)
 				:xy(butts.buttDest[iButty][1], butts.buttDest[iButty][2])
 				:zoom(0.2)
@@ -630,7 +646,7 @@ _FG_[#_FG_ + 1] = Def.Sprite {
 	end,
 	ButtergullMessageCommand = function(self)
 		self:visible(true)
-			:accelerate(12 / G.BPS)
+			:accelerate(butts.buttSpeed[1] / G.BPS)
 			:xy(G.W*(math.random()*0.3), G.H*-0.2)
 			:zoom(0.2)
 			:z(G.Zmin)
@@ -648,17 +664,93 @@ _FG_[#_FG_ + 1] = Def.Sprite {
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 --]]
 
+function TreeMoveCtrl(t)
+	local b = 		  telp.clamp(t,   0, 334)  * 334 + 0.001
+
+	b = b -           telp.clamp(t,   0,  16)  * 16		-- intro A: suppression
+														-- intro B: move nice and linearly (NAOKI put down the shamisen)
+	b = b + telp.ease(t, "outQuad",  44,  48)  * 2		-- end of intro B: where's my samurai...
+	b = b -           telp.clamp(t,  44,  48)  * 4		-- end of intro B: where's my samurai...
+
+
+	b = b -           telp.clamp(t,  50,  52)  * 2		-- I've been searching for a man
+	b = b -           telp.clamp(t,  54,  56)  * 2		-- all across Japan
+	b = b -           telp.clamp(t,  58,  60)  * 2		-- just to find, to
+	b = b -           telp.clamp(t,  62,  64)  * 2		-- find my samurai.
+	b = b -           telp.clamp(t,  66,  68)  * 2		-- Someone who is strong
+	b = b -           telp.clamp(t,  70,  72)  * 2		-- But still a little shy
+	b = b -           telp.clamp(t,  74,  76)  * 2		-- I need it.
+	b = b -           telp.clamp(t,  78,  80)  * 2		-- I need my samurai.
+
+	b = b + telp.ease(t, "outQuad", 108, 112)  * 2		-- end of chorus 1: where's my samurai...
+	b = b -           telp.clamp(t, 108, 112)  * 4		-- end of chorus 1: where's my samurai...
+
+	b = b -           telp.clamp(t, 114, 116)  * 2		-- I've been searching in the woods
+	b = b -           telp.clamp(t, 118, 120)  * 2		-- and high upon the hills
+	b = b -           telp.clamp(t, 122, 124)  * 2		-- just to find, to
+	b = b -           telp.clamp(t, 126, 128)  * 2		-- find my samurai.
+	b = b -           telp.clamp(t, 130, 132)  * 2		-- Someone who won't regret
+	b = b -           telp.clamp(t, 134, 136)  * 2		-- To keep me in his net.
+	b = b -           telp.clamp(t, 138, 140)  * 2		-- I need it.
+	b = b -           telp.clamp(t, 142, 144)  * 2		-- I need my samurai
+
+	b = b + telp.ease(t, "outQuad", 172, 176)  * 2		-- end of chorus 2: where's my samurai...
+	b = b -           telp.clamp(t, 172, 176)  * 4		-- end of chorus 2: where's my samurai...
+
+	b = b + telp.ease(t, "inQuad",  176, 179)  * 2		-- *triplet bullshits*
+		  -			  telp.clamp(t, 176, 180)  * 4
+	b = b + telp.ease(t, "outQuad", 180, 183)  * 2
+--		  -			  telp.clamp(t, 179, 180)  * 1
+	b = b + telp.ease(t, "inQuad",  184, 187)  * 2
+		  -			  telp.clamp(t, 184, 188)  * 4
+	b = b + telp.ease(t, "outQuad", 188, 191)  * 2
+--		  -			  telp.clamp(t, 179, 180)  * 1
+	b = b + telp.ease(t, "inQuad",  192, 195)  * 2		-- *triplet bullshits*
+		  -			  telp.clamp(t, 192, 196)  * 4
+	b = b + telp.ease(t, "outQuad", 196, 199)  * 2
+--		  -			  telp.clamp(t, 179, 180)  * 1
+	b = b + telp.ease(t, "inQuad",  200, 203)  * 1		-- lotsa triplets!!
+		  -			  telp.clamp(t, 200, 204)  * 4
+	b = b + telp.ease(t, "inOutQuad", 204, 208)  * 8		-- big voom...
+		  -			  telp.clamp(t, 204, 208)  * 4
+
+	b = b + 		  telp.clamp(t, 232, 232.5) * 0.5	-- NAOKI diddling throughout
+		  -			  telp.clamp(t, 232.5, 234) * 1.5
+	b = b + 		  telp.clamp(t, 234, 234.5) * 0.5
+		  -			  telp.clamp(t, 234.5, 235.5) * 1.0
+	b = b + 		  telp.clamp(t, 235.5, 236) * 0.5
+		  -			  telp.clamp(t, 236, 237.5) * 1.5
+	b = b + 		  telp.clamp(t, 237, 238) * 0.5
+		  -			  telp.clamp(t, 238, 240) * 2.0
+
+
+	b = b - 		  telp.clamp(t, 240, 271)  * 25		-- quarter speed slow chorus
+	b = b + telp.ease(t, "inQuad",  256, 271)  * 8		-- half speed rising chorus
+	b = b - 		  telp.clamp(t, 271, 272)  * 1
+
+	b = b + telp.ease(t, "outQuad", 332, 334)  * 1		-- end of chorus 3: where's my samurai...
+	b = b -           telp.clamp(t, 332, 334)  * 2		-- end of chorus 3: where's my samurai...
+
+
+	b = b + (( 16 <= t and t <=  46) and 1 or 0) * math.sin(2*PI*t)/(8*PI)		-- chorus 0 beatkeeping
+	b = b + (( 80 <= t and t <= 110) and 1 or 0) * math.sin(2*PI*t)/(8*PI)		-- chorus 1 beatkeeping
+	b = b + ((144 <= t and t <= 174) and 1 or 0) * math.sin(2*PI*t)/(8*PI)		-- chorus 2 beatkeeping
+	b = b + ((272 <= t and t <= 334) and 1 or 0) * math.sin(2*PI*t)/(8*PI)		-- chorus 3 beatkeeping
+
+	return b
+end
+
 perframes = {
 	PerturbTrees = function(t)		
 		for i = 1,treeMeta.nTrees do
 			perturbances[i].spreadin = 0.2 * math.cos(2*PI*G.T / 1)
 			perturbances[i].rotation = 12 * math.sin(2*PI*G.T / 16)
-			perturbances[i].coloring = 0.5 * math.sin(2*PI*(G.T / 27 + i * 7 / treeMeta.nTrees)) + 0.5
+--			perturbances[i].coloring = 0.5 * math.sin(2*PI*(G.T / 27 + i * 7 / treeMeta.nTrees)) + 0.5
 			perturbances[i].lengthen = 0
-			perturbances[i].unfurled = 1
 		end		
 	end,
 	ColorTrees = function(t, p)
+		p = p or {}
 		ind = p.ind or -1
 		rev = p.rev or false
 
@@ -671,14 +763,16 @@ perframes = {
 		end
 	end,
 	MoveTrees = function(t, p)
+		local tUse = TreeMoveCtrl(G.T)
 		for i = 1,treeMeta.nTrees do
 			local tCol = 			(i-1) % 3
 			local tRow = math.floor((i-1) / 3)
-			local tSweep = G.T + math.sin(2*PI*G.T)/(8*PI)
+			local tSweep = tUse
 			local tNear = ((tSweep - tRow) % 8) * 0.25
 			local tPose = (math.floor((tSweep - tRow) / 8) + tCol) % 3
-			local tZ = tNear * (G.Zmax-G.Zmin) + G.Zmin
-			Trace("### i = "..i..", tZ = "..tZ)
+			local tZ = (tNear-1) * (G.Zmax-G.Zmin) + G.Zmin
+			-- Trace("### i = "..i..", tZ = "..tZ)
+			treeZRec[i] = tZ
 
 			for j = 1,2 do
 				if treeActors[i][j] then
@@ -688,13 +782,30 @@ perframes = {
 							G.H*1.0
 						)
 						:z(tZ)
-						:zoom(telp.clamp(tNear*0.5, 0, 1)*1.5+0.5)
 						:visible(tZ > G.Zmin)
 				end
 			end
 		end
 	end,
-	FadeTrees = function(t, p)
+	FurlTrees = function(t, p)
+		p = p or {}
+		rev = p.rev or false
+		for i = 1,treeMeta.nTrees do
+			local effOrder = telp.clamp(treeZRec[i], G.Zmin, (G.Zmax+G.Zmin)*0.5)
+			local unfurl = math.pow(t, 0.2) * effOrder + math.pow(t, 2) * (1-effOrder)
+			perturbances[i].unfurled = rev and (1-unfurl) or unfurl
+		end
+	end,
+	FurlFog = function(t, p)
+		p = p or {}
+		rev = p.rev or false
+		for i = 1,nFog do
+			local effOrder = telp.clamp(treeZRec[i], G.Zmin, G.Zmax)
+			local unfurl = t * effOrder + math.pow(t, 5) * (1-effOrder)
+			if fogActors[i] then
+				fogActors[i]:diffusealpha(rev and (1-unfurl) or unfurl)
+			end
+		end
 	end,
 }
 executes = {
@@ -710,20 +821,20 @@ executes = {
 			if butts.buttActors[i] then
 --				butts.buttActors[i]:GetChild():z()
 --				butts.buttActors[i]:GetChild():z()
-				local xOrigin = G.W * (0.5 + (math.random()-0.5)*0.6*(corn == 'D' and 2 or 1))
-				local yOrigin = G.H * 1.2
+				local xOrigin = G.W * (0.5 + (math.random()-0.5)*0.8*(corn == 'D' and 2 or 1))
+				local yOrigin = G.H * 1.3
 
-				butts.buttDest[i] = {G.W * (0.5 + (math.random()-0.5)*0.6*(corn == 'D' and 2 or 1)), G.H * -0.2}
+				butts.buttDest[i] = {G.W * (0.5 + (math.random()-0.5)*0.8*(corn == 'D' and 2 or 1)), G.H * -0.3}
 				if corn == 'L' then
 					xOrigin = G.W * -0.2
 					if math.random() < 0.5 then
 						butts.buttDest[i] = {
 							G.W * (1.2),
-							G.H * (-0.2 + math.random()*0.6),
+							G.H * (-0.2 + math.random()*0.8),
 						}
 					else
 						butts.buttDest[i] = {
-							G.W * (1.2 - math.random()*0.6),
+							G.W * (1.2 - math.random()*0.8),
 							G.H * (-0.2),
 						}
 					end
@@ -733,11 +844,11 @@ executes = {
 					if math.random() < 0.5 then
 						butts.buttDest[i] = {
 							G.W * (-0.2),
-							G.H * (-0.2 + math.random()*0.6),
+							G.H * (-0.2 + math.random()*0.8),
 						}
 					else
 						butts.buttDest[i] = {
-							G.W * (-0.2 + math.random()*0.6),
+							G.W * (-0.2 + math.random()*0.8),
 							G.H * (-0.2),
 						}
 					end
@@ -774,22 +885,41 @@ local executeList = {
 	-- [2]: function to execute on this beat or as nearly after as possible
 	-- [3]: further parameters to the execute function
 
-	{  0.00, executes.CastButts, {'L',  1, 10, 16, 12} },
-	{  8.00, executes.CastButts, {'R', 11, 20, 16, 12} },
-	{ 16.00, executes.CastButts, {'C', 21, 30, 16, 12} },
+	{  0.00, executes.CastButts, {'L',  1, 16,  8, 8} },
+	{  0.00, executes.CastButts, {'R', 17, 32,  8, 8} },
+	{  4.00, executes.CastButts, {'C', 33, 48,  6, 6} },
 
-	{ 32.00, executes.CastButts, {'L',  1, 10,  4, 4} },
-	{ 36.00, executes.CastButts, {'R', 11, 20,  4, 4} },
-	{ 40.00, executes.CastButts, {'C', 21, 30,  4, 4} },
+	{ 28.00, executes.CastButts, {'L',  1,  6,  4, 8} },
+	{ 28.00, executes.CastButts, {'R',  7, 12,  4, 8} },
+	{ 36.00, executes.CastButts, {'C', 13, 24,  2, 8} },
+	{ 36.00, executes.CastButts, {'L', 25, 30,  4, 8} },
+	{ 36.00, executes.CastButts, {'R', 31, 36,  4, 8} },
 
-	{ 96.00, executes.CastButts, {'L',  1, 10, 16, 12} },
-	{104.00, executes.CastButts, {'R', 11, 20, 16, 12} },
-	{112.00, executes.CastButts, {'C', 21, 30, 16, 12} },
+	{ 78.00, executes.CastButts, {'D',  1, 18,  8, 8} },
+	{ 94.00, executes.CastButts, {'D', 19, 36,  8, 8} },
 
-	{239.00, executes.CastButts, {'D',  1, 15,  3, 6} },
-	{243.00, executes.CastButts, {'D', 16, 30,  3, 6} },
-	{247.00, executes.CastButts, {'D',  1, 15,  3, 6} },
-	{251.00, executes.CastButts, {'D', 16, 30,  3, 6} },
+	{142.00, executes.CastButts, {'D', 13, 30,  8, 8} },
+	{158.00, executes.CastButts, {'D', 31, 48,  8, 8} },
+
+	{208.00, executes.CastButts, {'L', 25, 48,  24, 8} },
+	{208.00, executes.CastButts, {'R',  1, 24,  24, 8} },
+
+	{240.00, executes.CastButts, {'D',  1, 48,  24, 8} },
+
+	{270.00, executes.CastButts, {'D',  1, 18,  8, 8} },
+	{286.00, executes.CastButts, {'D', 19, 36,  8, 8} },
+
+	{300.00, executes.CastButts, {'L',  1,  6,  4, 8} },
+	{300.00, executes.CastButts, {'R',  7, 12,  4, 8} },
+	{308.00, executes.CastButts, {'C', 13, 24,  2, 8} },
+	{308.00, executes.CastButts, {'L', 25, 30,  4, 8} },
+	{308.00, executes.CastButts, {'R', 31, 36,  4, 8} },
+
+	{316.00, executes.CastButts, {'L', 13, 18,  4, 8} },
+	{316.00, executes.CastButts, {'R', 19, 24,  4, 8} },
+	{324.00, executes.CastButts, {'C', 25, 36,  2, 8} },
+	{324.00, executes.CastButts, {'L', 37, 42,  4, 8} },
+	{324.00, executes.CastButts, {'R', 43, 48,  4, 8} },
 }
 
 local perframeList = {
@@ -798,6 +928,9 @@ local perframeList = {
 	-- [3]: function to execute that accepts progress through this perframe scaled from 0 to 1
 	--		(beat time is still accessible ofc)
 	-- [4]: further parameters to the perframe function
+
+	{  0.00,  16.00, perframes.FurlTrees },
+	{  0.00,  16.00, perframes.FurlFog },
 
 	{  0.00, 512.00, perframes.PerturbTrees },
 
