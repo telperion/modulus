@@ -162,14 +162,14 @@ end
 
 trees = {}
 treeMeta = {
-	nTrees = 4,
-	maxTreeSize = 60,
+	nTrees = 12,
+	maxTreeSize = 120,
 	maxTreeGen = 6,
-	fullScale = math.min(G.W, G.H) * 0.6,
-	zScale = 0.01,
+	fullScale = math.min(G.W, G.H) * 1.1,
+	zScale = 1.00,
 }
 treeMeta.leafSize = treeMeta.fullScale*0.05
-treeMeta.trunkThk = treeMeta.fullScale*0.03
+treeMeta.trunkThk = treeMeta.fullScale*0.01
 treeActors = {}
 treeCoords = {}
 treesInit = {}
@@ -458,7 +458,7 @@ function CalculateTreePositions(setupOnce)
 			-- Draw connecting branch.
 			local nodeCoord = TCart[j]
 			local fromCoord = TCart[trees[i][j].from]
-			local branchTaper = trees[i][j].leaf and 0 or 1
+			local branchTaper = trees[i][j].leaf and 1 or 1		-- and 0 or 1 for actual taper effect...
 			treeCoords[i][2][j*4 - 7] =	{
 				{nodeCoord[1]-treeMeta.trunkThk*0.5*branchTaper, -nodeCoord[2], nodeCoord[3]},
 				{0.2, 0.1, 0.0, 0.9},
@@ -483,11 +483,13 @@ function CalculateTreePositions(setupOnce)
 
 
 		if setupOnce then
+			local treeRow = (i-1)%4
+			local treeCol = math.floor((i-1)/4)
 			_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
 				InitCommand = function(self)
 					treeActors[i][2] = self
-					self:xy(G.W*(0.2*i), G.H*0.8)
-						:z(0)
+					self:xy(G.W*(0.2*treeRow + 0.2), G.H*1.0)
+						:z(treeMeta.fullScale*(0.5*treeCol - 0.5))
 						:SetVertices(treeCoords[i][2])
 						:SetDrawState({
 							Mode = "DrawMode_Quads",
@@ -499,8 +501,8 @@ function CalculateTreePositions(setupOnce)
 			_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
 				InitCommand = function(self)
 					treeActors[i][1] = self
-					self:xy(G.W*(0.2*i), G.H*0.8)
-						:z(0)
+					self:xy(G.W*(0.2*treeRow + 0.2), G.H*1.0)
+						:z(treeMeta.fullScale*(0.5*treeCol - 0.5))
 						:SetVertices(treeCoords[i][1])
 						:SetDrawState({
 							Mode = "DrawMode_Triangles",
@@ -512,16 +514,18 @@ function CalculateTreePositions(setupOnce)
 		end
 
 		if (treeActors[i][1] and treeActors[i][2]) and not treesInit[i] then
-			treeActors[i][1]:xy(G.W*(0.2*i), G.H*0.8)
-							:z(0)
+			local treeRow = (i-1)%4
+			local treeCol = math.floor((i-1)/4)
+			treeActors[i][1]:xy(G.W*(0.2*treeRow + 0.2), G.H*0.8)
+							:z(treeMeta.fullScale*(0.5*treeCol - 0.5))
 							:SetVertices(treeCoords[i][1])
 							:SetDrawState({
 								Mode = "DrawMode_Triangles",
 								First = 1,
 								Num = -1
 								})
-			treeActors[i][2]:xy(G.W*(0.2*i), G.H*0.8)
-							:z(0)
+			treeActors[i][2]:xy(G.W*(0.2*treeRow + 0.2), G.H*0.8)
+							:z(treeMeta.fullScale*(0.5*treeCol - 0.5))
 							:SetVertices(treeCoords[i][2])
 							:SetDrawState({
 								Mode = "DrawMode_Quads",
@@ -540,6 +544,7 @@ function CalculateTreePositions_Cheap()
 			if treeActors[i][j] then
 				treeActors[i][j]:zoomx(1 + perturbances[i].spreadin * 0.05)
 								:zoomy(1 - perturbances[i].spreadin * 0.05)
+								:zoomz(1 + perturbances[i].spreadin * 0.05)
 								:rotationy(perturbances[i].rotation)
 			end
 		end
@@ -553,22 +558,22 @@ for i = 0,20 do
 	local QCoords = {
 		{
 			{-0.6*G.W, -0.6*G.H, 0},
-			{0.0, 0.7, 0.5, i*0.01},
+			{0.0, 0.5, 0.3, i*0.01},
 			{0.0, 0.0}
 		},
 		{
 			{ 0.6*G.W, -0.6*G.H, 0},
-			{0.0, 0.7, 0.5, i*0.01},
+			{0.0, 0.5, 0.3, i*0.01},
 			{1.0, 0.0}
 		},
 		{
 			{ 0.6*G.W,  0.6*G.H, 0},
-			{0.0, 0.3, 0.0, i*0.05},
+			{0.0, 0.1, 0.0, i*0.03},
 			{1.0, 1.0}
 		},
 		{
 			{-0.6*G.W,  0.6*G.H, 0},
-			{0.0, 0.3, 0.0, i*0.05},
+			{0.0, 0.1, 0.0, i*0.03},
 			{0.0, 1.0}
 		},
 	}
