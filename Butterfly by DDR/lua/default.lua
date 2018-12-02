@@ -16,12 +16,16 @@
 local G = {}
 G.W = SCREEN_WIDTH
 G.H = SCREEN_HEIGHT
-G.BPS = GAMESTATE:GetSongBPS()
+G.BPS = 60.0 / 145.0		-- GAMESTATE:GetSongBPS()
 G.T = 0
 G.T_offset = 0
 G.msg = 0
+G.exe = 0
 G.per = 0
 G.P = {}
+
+G.Zmax =  5
+G.Zmin = -5
 
 -- Load helpful support functions and constants.
 local whereTheFlipAmI = GAMESTATE:GetCurrentSong():GetSongDir()
@@ -143,15 +147,6 @@ end
 -- 		:rotationx(1080)
 -- end
 
--- _FG_[#_FG_ + 1] = LoadActor('./tree.lua')
--- _FG_[#_FG_]["OnCommand"] = function(self)
--- 	self:xy(SCREEN_WIDTH * 0.5, SCREEN_HEIGHT * 0.5)
--- 		:z(10)
--- 		:rotationx(-60)
--- 		:SetDrawByZPosition(true)
--- 		:SetFOV(45)
--- end
-
 
 
 --[[
@@ -162,7 +157,7 @@ end
 
 trees = {}
 treeMeta = {
-	nTrees = 12,
+	nTrees = 24,
 	maxTreeSize = 120,
 	maxTreeGen = 6,
 	fullScale = math.min(G.W, G.H) * 1.1,
@@ -310,9 +305,9 @@ treePDF = {
 
 		zo = zo * gp
 
-			if zo < 0.10 then return 1
-		elseif zo < 0.40 then return 3
-		elseif zo < 0.70 then return 5
+			if zo < 0.20 then return 1
+		elseif zo < 0.50 then return 3
+		elseif zo < 0.80 then return 5
 		else                  return 0
 		end
 	end,
@@ -437,17 +432,17 @@ function CalculateTreePositions(setupOnce)
 			if trees[i][j].leaf then
 				treeCoords[i][1][3*leafIndex + 1] =	{
 					{nodeCoord[1]+treeMeta.leafSize*0.5, -nodeCoord[2]-treeMeta.leafSize*_SQRT3DIV6, nodeCoord[3]+0.001},
-					{1.0, 1.0, 0.0, 1.0},
+					{1.0, 1.0, 0.7, 1.0},
 					{0.0, 0.0}
 				}
 				treeCoords[i][1][3*leafIndex + 2] =	{
 					{nodeCoord[1]-treeMeta.leafSize*0.5, -nodeCoord[2]-treeMeta.leafSize*_SQRT3DIV6, nodeCoord[3]+0.001},
-					{0.0, 1.0, 1.0, 1.0},
+					{0.7, 1.0, 1.0, 1.0},
 					{0.0, 1.0}
 				}
 				treeCoords[i][1][3*leafIndex + 3] =	{
 					{nodeCoord[1], -nodeCoord[2]+treeMeta.leafSize*_SQRT3DIV3, nodeCoord[3]+0.001},
-					{0.0, 1.0, 0.0, 1.0},
+					{0.7, 1.0, 0.7, 0.8},
 					{1.0, 1.0}
 				}
 				leafIndex = leafIndex + 1
@@ -461,22 +456,22 @@ function CalculateTreePositions(setupOnce)
 			local branchTaper = trees[i][j].leaf and 1 or 1		-- and 0 or 1 for actual taper effect...
 			treeCoords[i][2][j*4 - 7] =	{
 				{nodeCoord[1]-treeMeta.trunkThk*0.5*branchTaper, -nodeCoord[2], nodeCoord[3]},
-				{0.2, 0.1, 0.0, 0.9},
+				{1.0, 1.0, 1.0, 1.0},
 				{0.0, 0.0}
 			}
 			treeCoords[i][2][j*4 - 6] =	{
 				{nodeCoord[1]+treeMeta.trunkThk*0.5*branchTaper, -nodeCoord[2], nodeCoord[3]},
-				{0.2, 0.1, 0.0, 0.9},
+				{1.0, 1.0, 1.0, 1.0},
 				{0.0, 1.0}
 			}
 			treeCoords[i][2][j*4 - 5] =	{
 				{fromCoord[1]+treeMeta.trunkThk*0.5, -fromCoord[2], fromCoord[3]},
-				{0.2, 0.0, 0.0, 0.7},
+				{1.0, 1.0, 1.0, 0.8},
 				{1.0, 1.0}
 			}
 			treeCoords[i][2][j*4 - 4] =	{
 				{fromCoord[1]-treeMeta.trunkThk*0.5, -fromCoord[2], fromCoord[3]},
-				{0.2, 0.0, 0.0, 0.7},
+				{1.0, 1.0, 1.0, 0.8},
 				{1.0, 0.0}
 			}
 		end
@@ -488,64 +483,48 @@ function CalculateTreePositions(setupOnce)
 			_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
 				InitCommand = function(self)
 					treeActors[i][2] = self
-					self:xy(G.W*(0.2*treeRow + 0.2), G.H*1.0)
-						:z(treeMeta.fullScale*(0.5*treeCol - 0.5))
+					self:xy(G.W*0.5, G.H*1.0)
+						:z(0)
 						:SetVertices(treeCoords[i][2])
 						:SetDrawState({
 							Mode = "DrawMode_Quads",
 							First = 1,
 							Num = -1
 							})
+						:diffuse({0.2, 0.1, 0.0, 0.7})
 				end
 			}
 			_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
 				InitCommand = function(self)
 					treeActors[i][1] = self
-					self:xy(G.W*(0.2*treeRow + 0.2), G.H*1.0)
-						:z(treeMeta.fullScale*(0.5*treeCol - 0.5))
+					self:xy(G.W*0.5, G.H*1.0)
+						:z(0)
 						:SetVertices(treeCoords[i][1])
 						:SetDrawState({
 							Mode = "DrawMode_Triangles",
 							First = 1,
 							Num = -1
 							})
+						:diffuse({0.0, 0.5, 0.0, 0.9})
 				end
 			}
-		end
-
-		if (treeActors[i][1] and treeActors[i][2]) and not treesInit[i] then
-			local treeRow = (i-1)%4
-			local treeCol = math.floor((i-1)/4)
-			treeActors[i][1]:xy(G.W*(0.2*treeRow + 0.2), G.H*0.8)
-							:z(treeMeta.fullScale*(0.5*treeCol - 0.5))
-							:SetVertices(treeCoords[i][1])
-							:SetDrawState({
-								Mode = "DrawMode_Triangles",
-								First = 1,
-								Num = -1
-								})
-			treeActors[i][2]:xy(G.W*(0.2*treeRow + 0.2), G.H*0.8)
-							:z(treeMeta.fullScale*(0.5*treeCol - 0.5))
-							:SetVertices(treeCoords[i][2])
-							:SetDrawState({
-								Mode = "DrawMode_Quads",
-								First = 1,
-								Num = -1
-								})
-			treesInit[i] = true
-		else
 		end
 	end
 end
 
 function CalculateTreePositions_Cheap()
 	for i = 1,treeMeta.nTrees do
+		local treeRGB = telp.HSV2RGB({0.3-perturbances[i].coloring*0.3, 1.0, 0.5 + perturbances[i].coloring*0.5})
 		for j = 1,2 do 	-- leaves, branches
 			if treeActors[i][j] then
-				treeActors[i][j]:zoomx(1 + perturbances[i].spreadin * 0.05)
+				treeActors[i][j]:zoomx((1 + perturbances[i].spreadin * 0.05) * perturbances[i].unfurled)
 								:zoomy(1 - perturbances[i].spreadin * 0.05)
 								:zoomz(1 + perturbances[i].spreadin * 0.05)
 								:rotationy(perturbances[i].rotation)
+
+				if j == 1 then
+					treeActors[i][j]:diffuse({treeRGB[1], treeRGB[2], treeRGB[3], 0.9})
+				end
 			end
 		end
 	end
@@ -568,12 +547,12 @@ for i = 0,20 do
 		},
 		{
 			{ 0.6*G.W,  0.6*G.H, 0},
-			{0.0, 0.1, 0.0, i*0.03},
+			{0.0, 0.1, 0.0, i*0.04},
 			{1.0, 1.0}
 		},
 		{
 			{-0.6*G.W,  0.6*G.H, 0},
-			{0.0, 0.1, 0.0, i*0.03},
+			{0.0, 0.1, 0.0, i*0.04},
 			{0.0, 1.0}
 		},
 	}
@@ -591,13 +570,19 @@ for i = 0,20 do
 	}
 end
 
-for i = 1,20 do
-	local iDelay = i * 3
-	local iSpeed = math.random() * 6 + 12
-	local iDir = (math.random() * 90 - 45) * math.pi / 180
-	local iButty = math.random(8)
 
-	local iTempy = LoadActor('./butt.lua', iButty)
+
+butts = {
+	nButts = 30,
+	buttActors = {},
+	buttDest = {},
+}
+for i = 1,butts.nButts do
+	butts.buttDest[i] = 'C'
+end
+
+for iButty = 1,butts.nButts do
+	local iTempy = LoadActor('./butt.lua', {iButty, G.BPS})
 	iTempy["OnCommand"] = function(self)
 		self:zoom(0.25)
 			:rotationx(-60)
@@ -605,26 +590,29 @@ for i = 1,20 do
 
 	_FG_[#_FG_ + 1] = Def.ActorFrame {
 		iTempy,
+		InitCommand = function(self)
+			butts.buttActors[iButty] = self
+		end,
 		OnCommand = function(self)
-			self:SetDrawByZPosition(true)
-				:SetFOV(45)
-				:rotationy(iDir * 180 / math.pi)
-				:z(5)
-				:xy(G.W * (0.5 - 0.7*math.tan(iDir)), G.H * (1.2 + 0.2*math.random()))
-
-			self:sleep(iDelay)
-				:queuecommand("FlyAway")		
+			self:visible(false)
 		end,
 		FlyAwayCommand = function(self)
-			self:accelerate(iSpeed)
-				:xy(G.W * (0.5 + 0.7*math.tan(iDir)), G.H * (-0.2 - 0.2*math.random()))
-				:zoom(0.5)
-				:z(-5)
-		end
+			local iSpeed = (math.random() * 6 + 12) / G.BPS
+
+			self:visible(true)
+				:accelerate(iSpeed)
+				:xy(butts.buttDest[iButty][1], butts.buttDest[iButty][2])
+				:zoom(0.2)
+				:z(G.Zmin)
+				:queuecommand("HideAway")				
+		end,
+		HideAwayCommand = function(self)
+			self:visible(false)
+		end,
 	}
 end
 
-
+	
 
 --[[
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
@@ -635,9 +623,11 @@ end
 perframes = {
 	PerturbTrees = function(t)		
 		for i = 1,treeMeta.nTrees do
-			perturbances[i].spreadin = 1 * math.cos(2*PI*G.T / 2)
-			perturbances[i].rotation = 6 * math.sin(2*PI*G.T / 16)
+			perturbances[i].spreadin = 0.2 * math.cos(2*PI*G.T / 1)
+			perturbances[i].rotation = 12 * math.sin(2*PI*G.T / 16)
+--			perturbances[i].coloring = 0.5 * math.sin(2*PI*G.T / 32) + 0.5
 			perturbances[i].lengthen = 0
+			perturbances[i].unfurled = 1
 		end		
 	end,
 	ColorTrees = function(t, p)
@@ -652,7 +642,87 @@ perframes = {
 			end
 		end
 	end,
+	MoveTrees = function(t, p)
+		for i = 1,treeMeta.nTrees do
+			local tCol = 			(i-1) % 3
+			local tRow = math.floor((i-1) / 3)
+			local tSweep = G.T + math.sin(2*PI*G.T)/(8*PI)
+			local tNear = ((tSweep - tRow) % 8) * 0.25
+			local tZ = tNear * (G.Zmax-G.Zmin) + G.Zmin
+			Trace("### i = "..i..", tZ = "..tZ)
+
+			for j = 1,2 do
+				if treeActors[i][j] then
+					treeActors[i][j]
+						:xy(
+							G.W*(0.5 + (tCol-1)*0.4 + 0.1*math.sin(2*PI*(tSweep - tRow) / 7)),
+							G.H*1.0
+						)
+						:z(tZ)
+						:zoom(telp.clamp(tNear*0.5, 0, 1)*1.5+0.5)
+						:visible(tZ > G.Zmin)
+				end
+			end
+		end
+	end,
+	FadeTrees = function(t, p)
+	end,
 }
+executes = {
+	CastButts = function(p)
+		local corn = p[1] or 'C'
+		local selMin = p[2] or 1
+		local selMax = p[3] or butts.nButts
+
+		for i = selMin,selMax do			
+			if butts.buttActors[i] then
+--				butts.buttActors[i]:GetChild():z()
+--				butts.buttActors[i]:GetChild():z()
+				local xOrigin = G.W * (0.3 + math.random()*0.4)
+				local yOrigin = G.H * 1.2
+
+				butts.buttDest[i] = {G.W * (0.3 + math.random()*0.4), G.H * -0.2}
+				if corn == 'L' then
+					xOrigin = G.W * -0.2
+					if math.random() < 0.5 then
+						butts.buttDest[i] = {
+							G.W * (1.2),
+							G.H * (-0.2 + math.random()*0.6),
+						}
+					else
+						butts.buttDest[i] = {
+							G.W * (1.2 - math.random()*0.6),
+							G.H * (-0.2),
+						}
+					end
+				end
+				if corn == 'R' then
+					xOrigin = G.W *  1.2
+					if math.random() < 0.5 then
+						butts.buttDest[i] = {
+							G.W * (-0.2),
+							G.H * (-0.2 + math.random()*0.6),
+						}
+					else
+						butts.buttDest[i] = {
+							G.W * (-0.2 + math.random()*0.6),
+							G.H * (-0.2),
+						}
+					end
+				end
+
+				local iDir = math.atan2(butts.buttDest[i][1]-xOrigin, butts.buttDest[i][2]-yOrigin)		-- backwards on purpose!!
+				
+				butts.buttActors[i] :xy(xOrigin, yOrigin)
+									:z(G.Zmax)
+									:rotationy(iDir / DEG_TO_RAD)
+									:zoom(2)
+									:queuecommand("FlyAway")
+			end
+		end
+	end,
+}
+
 
 local messageList = {
 	-- [1]: beat number to issue message on
@@ -662,6 +732,16 @@ local messageList = {
 --	{  0.00, "RecenterProxy"},
 }
 
+local executeList = {
+	-- [1]: beat number execute occurs on
+	-- [2]: function to execute on this beat or as nearly after as possible
+	-- [3]: further parameters to the execute function
+
+	{  0.00, executes.CastButts, {'L',  1, 10} },
+	{  8.00, executes.CastButts, {'R', 11, 20} },
+	{ 16.00, executes.CastButts, {'C', 21, 30} },
+}
+
 local perframeList = {
 	-- [1]: beat number perframe begins on
 	-- [2]: beat number perframe ends on
@@ -669,8 +749,9 @@ local perframeList = {
 	--		(beat time is still accessible ofc)
 	-- [4]: further parameters to the perframe function
 
-	{  0.00, 512.00, perframes.PerturbTrees }
+	{  0.00, 512.00, perframes.PerturbTrees },
 
+	{  0.00, 512.00, perframes.MoveTrees },
 }
 
 -- Time-based effects.
@@ -681,6 +762,7 @@ function ButtUpdate(self)
 	-- TODO: this assumes the effect applies over a constant BPM section!!
 	G.BPS = GAMESTATE:GetSongBPS()
 
+	-- I`ve binch
 	CalculateTreePositions_Cheap()
 			
 	-- Broadcast messages on their own terms.
@@ -703,6 +785,27 @@ function ButtUpdate(self)
 		end
 	end
 
+	-- Executes as they appear.
+	while true do
+		if G.exe < #executeList then
+			local executeBeat, executeFunc, executeArgs = unpack(executeList[G.exe+1])
+			if G.T >= executeBeat then			
+				if executeArgs then
+					executeFunc(executeArgs)
+				else
+					executeFunc()
+				end
+				
+				G.exe = G.exe + 1
+			else
+				break;
+			end
+		else
+			break;
+		end
+	end
+
+	-- Perframes, any or all, all the time.
 	for pfi = 1,#perframeList do
 		pfParams = perframeList[pfi]
 		if pfParams[1] < G.T and G.T < pfParams[2] then		
@@ -737,7 +840,7 @@ modsTable = {
 	-- [5]: player application (1 = P1, 2 = P2, 3 = both, 0 = neither)
 		
 --		{   0.0,	"ScrollSpeed",	niceSpeed,    8.0,	3}, 
-		{   0.0,	"Dark",				  0.8,    8.0,	3}, 
+		{   0.0,	"Dark",				  0.5,    8.0,	3}, 
 }
 _FG_[#_FG_ + 1] = LoadActor("./modsHQ.lua", {modsTable, 0.009, false})
 

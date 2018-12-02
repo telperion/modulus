@@ -7,10 +7,10 @@
 --
 -------------------------------------------------------------------------------
 
-buttVariety = ... or 1
-
-flapSpeed = 1.0		-- seconds per full cycle
-flapCrisp = 0.2		-- proportion spent flapping up/in
+buttVariety, flapSpeed = unpack(...)
+buttVariety = buttVariety	or 0
+flapSpeed 	= flapSpeed 	or 1.0	-- seconds per full cycle
+flapCrisp = 0.2						-- proportion spent flapping up/in
 
 local B = Def.ActorFrame {
 	Def.Actor { 
@@ -19,6 +19,7 @@ local B = Def.ActorFrame {
 	},
 
 	InitCommand = function(self)
+		self:SetDrawByZPosition(true)
 	end,
 	OnCommand = function(self)
 	end,
@@ -27,7 +28,7 @@ local B = Def.ActorFrame {
 		Name = "WingLOuter",
 		Def.Sprite {
 			Name = "WingLInner",
-			Texture = "butts/butt-"..string.char(buttVariety+64)..".png",
+			Texture = "butts/butt-"..string.char(buttVariety%10+65)..".png",
 
 			InitCommand = function(self)
 				self:xy(-128, 0)
@@ -55,7 +56,7 @@ local B = Def.ActorFrame {
 		Name = "WingROuter",
 		Def.Sprite {
 			Name = "WingRInner",
-			Texture = "butts/butt-"..string.char(buttVariety+64)..".png",
+			Texture = "butts/butt-"..string.char(buttVariety%10+65)..".png",
 
 			InitCommand = function(self)
 				self:xy(128, 0)
