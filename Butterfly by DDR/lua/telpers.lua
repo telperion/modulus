@@ -85,6 +85,17 @@ if not telp then
 		return rgb
 	end
 
+	telp.randlist = function(n)
+		x = {}
+		for i = 1,n do
+			v = math.random(#x + 1)
+			for j = #x,v,-1 do
+				x[j+1] = x[j]
+			end
+			x[v] = i
+		end
+		return x
+	end
 
 	--[[
 

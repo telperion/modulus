@@ -16,7 +16,7 @@
 local G = {}
 G.W = SCREEN_WIDTH
 G.H = SCREEN_HEIGHT
-G.BPS = 60.0 / 145.0		-- GAMESTATE:GetSongBPS()
+G.BPS = 145.0 / 60.0		-- GAMESTATE:GetSongBPS()
 G.T = 0
 G.T_offset = 0
 G.msg = 0
@@ -26,6 +26,8 @@ G.P = {}
 
 G.Zmax =  5
 G.Zmin = -5
+
+telp = nil
 
 -- Load helpful support functions and constants.
 local whereTheFlipAmI = GAMESTATE:GetCurrentSong():GetSongDir()
@@ -305,9 +307,9 @@ treePDF = {
 
 		zo = zo * gp
 
-			if zo < 0.20 then return 1
-		elseif zo < 0.50 then return 3
-		elseif zo < 0.80 then return 5
+			if zo < 0.15 then return 1
+		elseif zo < 0.30 then return 3
+		elseif zo < 0.70 then return 5
 		else                  return 0
 		end
 	end,
@@ -576,13 +578,15 @@ butts = {
 	nButts = 30,
 	buttActors = {},
 	buttDest = {},
+	buttSpeed = {},
 }
 for i = 1,butts.nButts do
 	butts.buttDest[i] = 'C'
+	butts.buttSpeed[i] = (math.random() * 6 + 12)
 end
 
 for iButty = 1,butts.nButts do
-	local iTempy = LoadActor('./butt.lua', {iButty, G.BPS})
+	local iTempy = LoadActor('./butt.lua', {iButty, 1 / G.BPS})
 	iTempy["OnCommand"] = function(self)
 		self:zoom(0.25)
 			:rotationx(-60)
@@ -597,14 +601,12 @@ for iButty = 1,butts.nButts do
 			self:visible(false)
 		end,
 		FlyAwayCommand = function(self)
-			local iSpeed = (math.random() * 6 + 12) / G.BPS
-
 			self:visible(true)
-				:accelerate(iSpeed)
+				:accelerate(butts.buttSpeed[iButty] / G.BPS)
 				:xy(butts.buttDest[iButty][1], butts.buttDest[iButty][2])
 				:zoom(0.2)
 				:z(G.Zmin)
-				:queuecommand("HideAway")				
+				:queuecommand("HideAway")
 		end,
 		HideAwayCommand = function(self)
 			self:visible(false)
@@ -612,6 +614,32 @@ for iButty = 1,butts.nButts do
 	}
 end
 
+
+-- ehehe
+_FG_[#_FG_ + 1] = Def.Sprite {
+	Name = "gull",
+	Texture = "butts/gull",
+	InitCommand = function(self)
+		self:SetAllStateDelays(1 / (G.BPS * 13))
+			:xy(G.W*(math.random()*0.3+0.7), G.H*1.2)
+			:z(G.Zmax)
+			:zoom(1.5)
+	end,
+	OnCommand = function(self)
+		self:visible(false)
+	end,
+	ButtergullMessageCommand = function(self)
+		self:visible(true)
+			:accelerate(12 / G.BPS)
+			:xy(G.W*(math.random()*0.3), G.H*-0.2)
+			:zoom(0.2)
+			:z(G.Zmin)
+			:queuecommand("HideAway")
+	end,
+	HideAwayCommand = function(self)
+		self:visible(false)
+	end,
+}
 	
 
 --[[
@@ -625,7 +653,7 @@ perframes = {
 		for i = 1,treeMeta.nTrees do
 			perturbances[i].spreadin = 0.2 * math.cos(2*PI*G.T / 1)
 			perturbances[i].rotation = 12 * math.sin(2*PI*G.T / 16)
---			perturbances[i].coloring = 0.5 * math.sin(2*PI*G.T / 32) + 0.5
+			perturbances[i].coloring = 0.5 * math.sin(2*PI*(G.T / 27 + i * 7 / treeMeta.nTrees)) + 0.5
 			perturbances[i].lengthen = 0
 			perturbances[i].unfurled = 1
 		end		
@@ -648,6 +676,7 @@ perframes = {
 			local tRow = math.floor((i-1) / 3)
 			local tSweep = G.T + math.sin(2*PI*G.T)/(8*PI)
 			local tNear = ((tSweep - tRow) % 8) * 0.25
+			local tPose = (math.floor((tSweep - tRow) / 8) + tCol) % 3
 			local tZ = tNear * (G.Zmax-G.Zmin) + G.Zmin
 			Trace("### i = "..i..", tZ = "..tZ)
 
@@ -655,7 +684,7 @@ perframes = {
 				if treeActors[i][j] then
 					treeActors[i][j]
 						:xy(
-							G.W*(0.5 + (tCol-1)*0.4 + 0.1*math.sin(2*PI*(tSweep - tRow) / 7)),
+							G.W*(0.5 + (tPose-1)*0.4 + 0.1*math.sin(2*PI*(tSweep - tRow) / 7)),
 							G.H*1.0
 						)
 						:z(tZ)
@@ -673,15 +702,18 @@ executes = {
 		local corn = p[1] or 'C'
 		local selMin = p[2] or 1
 		local selMax = p[3] or butts.nButts
+		local delayRange = p[4] or 0
+		local maxTransit = p[5] or 6
+		local delays = telp.randlist(selMax-selMin+1)
 
 		for i = selMin,selMax do			
 			if butts.buttActors[i] then
 --				butts.buttActors[i]:GetChild():z()
 --				butts.buttActors[i]:GetChild():z()
-				local xOrigin = G.W * (0.3 + math.random()*0.4)
+				local xOrigin = G.W * (0.5 + (math.random()-0.5)*0.6*(corn == 'D' and 2 or 1))
 				local yOrigin = G.H * 1.2
 
-				butts.buttDest[i] = {G.W * (0.3 + math.random()*0.4), G.H * -0.2}
+				butts.buttDest[i] = {G.W * (0.5 + (math.random()-0.5)*0.6*(corn == 'D' and 2 or 1)), G.H * -0.2}
 				if corn == 'L' then
 					xOrigin = G.W * -0.2
 					if math.random() < 0.5 then
@@ -711,12 +743,16 @@ executes = {
 					end
 				end
 
+				local iDelayProp = delays[i-selMin+1]/#delays
+				local iSleep = math.sqrt(iDelayProp) * delayRange
+				butts.buttSpeed[i] = math.sqrt(1 - iDelayProp*0.5) * maxTransit
 				local iDir = math.atan2(butts.buttDest[i][1]-xOrigin, butts.buttDest[i][2]-yOrigin)		-- backwards on purpose!!
 				
 				butts.buttActors[i] :xy(xOrigin, yOrigin)
 									:z(G.Zmax)
 									:rotationy(iDir / DEG_TO_RAD)
 									:zoom(2)
+									:sleep(iSleep / G.BPS)
 									:queuecommand("FlyAway")
 			end
 		end
@@ -730,6 +766,7 @@ local messageList = {
 	-- [3]: optional table of arguments passed to message
 
 --	{  0.00, "RecenterProxy"},
+	{240.00 + math.random(0,3) * 4, "Buttergull"},
 }
 
 local executeList = {
@@ -737,9 +774,22 @@ local executeList = {
 	-- [2]: function to execute on this beat or as nearly after as possible
 	-- [3]: further parameters to the execute function
 
-	{  0.00, executes.CastButts, {'L',  1, 10} },
-	{  8.00, executes.CastButts, {'R', 11, 20} },
-	{ 16.00, executes.CastButts, {'C', 21, 30} },
+	{  0.00, executes.CastButts, {'L',  1, 10, 16, 12} },
+	{  8.00, executes.CastButts, {'R', 11, 20, 16, 12} },
+	{ 16.00, executes.CastButts, {'C', 21, 30, 16, 12} },
+
+	{ 32.00, executes.CastButts, {'L',  1, 10,  4, 4} },
+	{ 36.00, executes.CastButts, {'R', 11, 20,  4, 4} },
+	{ 40.00, executes.CastButts, {'C', 21, 30,  4, 4} },
+
+	{ 96.00, executes.CastButts, {'L',  1, 10, 16, 12} },
+	{104.00, executes.CastButts, {'R', 11, 20, 16, 12} },
+	{112.00, executes.CastButts, {'C', 21, 30, 16, 12} },
+
+	{239.00, executes.CastButts, {'D',  1, 15,  3, 6} },
+	{243.00, executes.CastButts, {'D', 16, 30,  3, 6} },
+	{247.00, executes.CastButts, {'D',  1, 15,  3, 6} },
+	{251.00, executes.CastButts, {'D', 16, 30,  3, 6} },
 }
 
 local perframeList = {
