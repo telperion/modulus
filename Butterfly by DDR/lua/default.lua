@@ -162,8 +162,8 @@ end
 
 trees = {}
 treeMeta = {
-	nTrees = 12,
-	maxTreeSize = 150,
+	nTrees = 4,
+	maxTreeSize = 60,
 	maxTreeGen = 6,
 	fullScale = math.min(G.W, G.H) * 0.6,
 	zScale = 0.01,
@@ -171,6 +171,8 @@ treeMeta = {
 treeMeta.leafSize = treeMeta.fullScale*0.05
 treeMeta.trunkThk = treeMeta.fullScale*0.03
 treeActors = {}
+treeCoords = {}
+treesInit = {}
 
 
 _PTBN_ = {
@@ -235,12 +237,12 @@ _TN_ = {
 	    return ret
 	end,
   
-	FullCoord = function(self, nodeList)
+	FullCoord = function(self)
 		if self.from <= 0 then
 			return _TN_:new()
 		else
-			local ref = nodeList[self.from]:FullCoord(nodeList)
-			local psf = self:Perturb()
+			local ref = trees[self.whom][self.from]:FullCoord()
+			local psf = self --self:Perturb()
 
       		local rcp = math.cos(ref.ph)
       		local rsp = math.sin(ref.ph)
@@ -248,7 +250,7 @@ _TN_ = {
       		local rst = math.sin(ref.th)
       		local bcp = math.cos(ref.ph + psf.ph)
       		local bsp = math.sin(ref.ph + psf.ph)
-      		local bct = math.cos(ref.th + psf.th)
+     		local bct = math.cos(ref.th + psf.th)
       		local bst = math.sin(ref.th + psf.th)
       		local rll = ref.ll
       		local bll = psf.ll
@@ -278,7 +280,7 @@ _TN_ = {
 		if self.from <= 0 then
 			return 0
 		else
-			return self:FullCoord(nodeList).ll
+			return self:FullCoord().ll
 		end
 	end,
 }
@@ -289,7 +291,9 @@ _TN_ = {
 for i = 1,treeMeta.nTrees do
 	trees[i] = {_TN_:new()}
 	trees[i][1].whom = i
-	treeActors[i] = {}
+	treeActors[i] = {}			-- leaves, branches
+	treeCoords[i] = {{}, {}}	-- leaves, branches
+	treesInit[i] = false
 end
 
 
@@ -306,9 +310,9 @@ treePDF = {
 
 		zo = zo * gp
 
-			if zo < 0.02 then return 1
-		elseif zo < 0.20 then return 3
-		elseif zo < 0.60 then return 5
+			if zo < 0.10 then return 1
+		elseif zo < 0.40 then return 3
+		elseif zo < 0.70 then return 5
 		else                  return 0
 		end
 	end,
@@ -358,7 +362,7 @@ treeMeta.Growth = function(treeIndex, gen)
 					from = i,
 					ph = treePDF.phi({zo = parPhi}),
 					th = treePDF.the({zo = parThe, buds = buds, budIndex = j}),
-					ll = treePDF.len({zo = parLen, dist = tt[i]:FullDist(tt)})
+					ll = treePDF.len({zo = parLen, dist = tt[i]:FullDist()})
 					})
 				Trace(
 					x ..
@@ -367,7 +371,7 @@ treeMeta.Growth = function(treeIndex, gen)
 					", phi = "			.. tt[x].ph * 180/math.pi ..
 					"deg, theta = "		.. tt[x].th * 180/math.pi ..
 					"deg, len = "		.. tt[x].ll ..
-					", total len = "	.. tt[x]:FullDist(tt)
+					", total len = "	.. tt[x]:FullDist()
 					)
 
 				if x > treeMeta.maxTreeSize then
@@ -409,83 +413,134 @@ end
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 --]]
 
-for i = 1,3 do
+for i = 1,treeMeta.nTrees do
 	treeMeta.Plant(i)
 end
+
+local _SQRT3DIV6 = math.sqrt(3)/6
+local _SQRT3DIV3 = math.sqrt(3)/3
 
 function CalculateTreePositions(setupOnce)
 	setupOnce = setupOnce or false	-- ONLY CALL WITH THIS PARAMETER ONCE!
 
 	for i = 1,treeMeta.nTrees do		
+		local TCart = {}			-- All cartesian coordinates
+		for j = 1,#trees[i] do
+			TCart[j] = trees[i][j]:FullCoord():Perturb():ToCartesian()
+		end
+
+		local leafIndex = 0
 		for j = 2,#trees[i] do 		-- We don't need to draw the root; start from index 2
-			local nodeCoord = trees[i][j]:FullCoord(trees[i]):Perturb():ToCartesian()
-			local TCoords = {}
+			local nodeCoord = TCart[j]
 
 			-- Draw leaves as leaves.
 			if trees[i][j].leaf then
-				TCoords[#TCoords + 1] =	{
-					{nodeCoord[1], -nodeCoord[2]-treeMeta.leafSize*0.5, 0.001},
-					{0.0, 1.0, 0.0, 1.0},
+				treeCoords[i][1][3*leafIndex + 1] =	{
+					{nodeCoord[1]+treeMeta.leafSize*0.5, -nodeCoord[2]-treeMeta.leafSize*_SQRT3DIV6, nodeCoord[3]+0.001},
+					{1.0, 1.0, 0.0, 1.0},
 					{0.0, 0.0}
 				}
-				TCoords[#TCoords + 1] =	{
-					{nodeCoord[1]-treeMeta.leafSize*math.sqrt(1/1.5), -nodeCoord[2], 0.001},
+				treeCoords[i][1][3*leafIndex + 2] =	{
+					{nodeCoord[1]-treeMeta.leafSize*0.5, -nodeCoord[2]-treeMeta.leafSize*_SQRT3DIV6, nodeCoord[3]+0.001},
 					{0.0, 1.0, 1.0, 1.0},
 					{0.0, 1.0}
 				}
-				TCoords[#TCoords + 1] =	{
-					{nodeCoord[1], -nodeCoord[2]+treeMeta.leafSize*0.5, 0.001},
-					{1.0, 0.0, 1.0, 1.0},
+				treeCoords[i][1][3*leafIndex + 3] =	{
+					{nodeCoord[1], -nodeCoord[2]+treeMeta.leafSize*_SQRT3DIV3, nodeCoord[3]+0.001},
+					{0.0, 1.0, 0.0, 1.0},
 					{1.0, 1.0}
 				}
-				TCoords[#TCoords + 1] =	{
-					{nodeCoord[1]+treeMeta.leafSize*math.sqrt(1/1.5), -nodeCoord[2], 0.001},
-					{1.0, 1.0, 0.0, 1.0},
-					{1.0, 0.0}
-				}
+				leafIndex = leafIndex + 1
 			end
+		end
 
+		for j = 2,#trees[i] do 		-- We don't need to draw the root; start from index 2
 			-- Draw connecting branch.
-			local fromCoord = trees[i][trees[i][j].from]:FullCoord(trees[i]):Perturb():ToCartesian()
+			local nodeCoord = TCart[j]
+			local fromCoord = TCart[trees[i][j].from]
 			local branchTaper = trees[i][j].leaf and 0 or 1
-			TCoords[#TCoords + 1] =	{
-				{nodeCoord[1]-treeMeta.trunkThk*0.5*branchTaper, -nodeCoord[2], 0.0},
+			treeCoords[i][2][j*4 - 7] =	{
+				{nodeCoord[1]-treeMeta.trunkThk*0.5*branchTaper, -nodeCoord[2], nodeCoord[3]},
 				{0.2, 0.1, 0.0, 0.9},
 				{0.0, 0.0}
 			}
-			TCoords[#TCoords + 1] =	{
-				{nodeCoord[1]+treeMeta.trunkThk*0.5*branchTaper, -nodeCoord[2], 0.0},
+			treeCoords[i][2][j*4 - 6] =	{
+				{nodeCoord[1]+treeMeta.trunkThk*0.5*branchTaper, -nodeCoord[2], nodeCoord[3]},
 				{0.2, 0.1, 0.0, 0.9},
 				{0.0, 1.0}
 			}
-			TCoords[#TCoords + 1] =	{
-				{fromCoord[1]+treeMeta.trunkThk*0.5, -fromCoord[2], fromCoord[3]-nodeCoord[3]},
+			treeCoords[i][2][j*4 - 5] =	{
+				{fromCoord[1]+treeMeta.trunkThk*0.5, -fromCoord[2], fromCoord[3]},
 				{0.2, 0.0, 0.0, 0.7},
 				{1.0, 1.0}
 			}
-			TCoords[#TCoords + 1] =	{
-				{fromCoord[1]-treeMeta.trunkThk*0.5, -fromCoord[2], fromCoord[3]-nodeCoord[3]},
+			treeCoords[i][2][j*4 - 4] =	{
+				{fromCoord[1]-treeMeta.trunkThk*0.5, -fromCoord[2], fromCoord[3]},
 				{0.2, 0.0, 0.0, 0.7},
 				{1.0, 0.0}
 			}
+		end
 
-			if setupOnce then
-				_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
-					InitCommand = function(self)
-						treeActors[i][j-1] = self
-					end
-				}
-			end
 
-			if treeActors[i][j-1] then
-				treeActors[i][j-1]	:xy(G.W*(0.3*i - 0.25), G.H*0.8)
-									:z(nodeCoord[3])
-									:SetVertices(TCoords)
-									:SetDrawState({
-										Mode = "DrawMode_Quads",
-										First = 1,
-										Num = -1
-										})
+		if setupOnce then
+			_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
+				InitCommand = function(self)
+					treeActors[i][2] = self
+					self:xy(G.W*(0.2*i), G.H*0.8)
+						:z(0)
+						:SetVertices(treeCoords[i][2])
+						:SetDrawState({
+							Mode = "DrawMode_Quads",
+							First = 1,
+							Num = -1
+							})
+				end
+			}
+			_FG_[#_FG_ + 1] = Def.ActorMultiVertex {
+				InitCommand = function(self)
+					treeActors[i][1] = self
+					self:xy(G.W*(0.2*i), G.H*0.8)
+						:z(0)
+						:SetVertices(treeCoords[i][1])
+						:SetDrawState({
+							Mode = "DrawMode_Triangles",
+							First = 1,
+							Num = -1
+							})
+				end
+			}
+		end
+
+		if (treeActors[i][1] and treeActors[i][2]) and not treesInit[i] then
+			treeActors[i][1]:xy(G.W*(0.2*i), G.H*0.8)
+							:z(0)
+							:SetVertices(treeCoords[i][1])
+							:SetDrawState({
+								Mode = "DrawMode_Triangles",
+								First = 1,
+								Num = -1
+								})
+			treeActors[i][2]:xy(G.W*(0.2*i), G.H*0.8)
+							:z(0)
+							:SetVertices(treeCoords[i][2])
+							:SetDrawState({
+								Mode = "DrawMode_Quads",
+								First = 1,
+								Num = -1
+								})
+			treesInit[i] = true
+		else
+		end
+	end
+end
+
+function CalculateTreePositions_Cheap()
+	for i = 1,treeMeta.nTrees do
+		for j = 1,2 do 	-- leaves, branches
+			if treeActors[i][j] then
+				treeActors[i][j]:zoomx(1 + perturbances[i].spreadin * 0.05)
+								:zoomy(1 - perturbances[i].spreadin * 0.05)
+								:rotationy(perturbances[i].rotation)
 			end
 		end
 	end
@@ -575,7 +630,7 @@ end
 perframes = {
 	PerturbTrees = function(t)		
 		for i = 1,treeMeta.nTrees do
-			perturbances[i].spreadin = 1 * math.cos(2*PI*G.T)
+			perturbances[i].spreadin = 1 * math.cos(2*PI*G.T / 2)
 			perturbances[i].rotation = 6 * math.sin(2*PI*G.T / 16)
 			perturbances[i].lengthen = 0
 		end		
@@ -621,7 +676,7 @@ function ButtUpdate(self)
 	-- TODO: this assumes the effect applies over a constant BPM section!!
 	G.BPS = GAMESTATE:GetSongBPS()
 
-	CalculateTreePositions()
+	CalculateTreePositions_Cheap()
 			
 	-- Broadcast messages on their own terms.
 	while true do
