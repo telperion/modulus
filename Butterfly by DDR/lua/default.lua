@@ -25,11 +25,17 @@ G.exe = 0
 G.per = 0
 G.P = {}
 G.bypass = false
+G.abort = false
 
 G.Zmax =  5
 G.Zmin = -5
 
 telp = nil
+
+
+if G.abort
+	return {}
+end
 
 -- Load helpful support functions and constants.
 local whereTheFlipAmI = GAMESTATE:GetCurrentSong():GetSongDir()
@@ -1143,7 +1149,7 @@ end
 
 table.sort(messageList, timetableCompare)
 table.sort(executeList, timetableCompare)
-table.sort(perframeList, timetableCompare)
+--table.sort(perframeList, timetableCompare)
 
 
 -- Time-based effects.
