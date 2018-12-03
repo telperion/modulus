@@ -5,7 +5,7 @@
 --		
 --		Author: 	Telperion
 --		Date: 		2018-11-25
---		Version:	0.6 -prototype-
+--		Version:	0.5 -prototype-
 --
 --
 --		A fresh take on a classic song.
@@ -24,7 +24,7 @@ G.msg = 0
 G.exe = 0
 G.per = 0
 G.P = {}
-G.bypass = true
+G.bypass = false
 
 G.Zmax =  5
 G.Zmin = -5
@@ -366,32 +366,32 @@ treeMeta.Growth = function(treeIndex, gen)
 					th = treePDF.the({zo = parThe, buds = buds, budIndex = j}),
 					ll = treePDF.len({zo = parLen, dist = tt[i]:FullDist()})
 					})
-				Trace(
-					x ..
-					": origin = "		.. i ..
-					", bud = "			.. j ..
-					", phi = "			.. tt[x].ph * 180/math.pi ..
-					"deg, theta = "		.. tt[x].th * 180/math.pi ..
-					"deg, len = "		.. tt[x].ll ..
-					", total len = "	.. tt[x]:FullDist()
-					)
+--				Trace(
+--					x ..
+--					": origin = "		.. i ..
+--					", bud = "			.. j ..
+--					", phi = "			.. tt[x].ph * 180/math.pi ..
+--					"deg, theta = "		.. tt[x].th * 180/math.pi ..
+--					"deg, len = "		.. tt[x].ll ..
+--					", total len = "	.. tt[x]:FullDist()
+--					)
 
 				if x > treeMeta.maxTreeSize then
-					Trace(i .. ": early stop!")
+--					Trace(i .. ": early stop!")
 					break
 				end
 			end
 			if buds > 0 then
 				trees[treeIndex][i].leaf = false
-				Trace(i .. ": no longer a leaf")
+--				Trace(i .. ": no longer a leaf")
 			else
-				Trace(i .. ": still a leaf")
+--				Trace(i .. ": still a leaf")
 			end
 		end
 
 
 		if x > treeMeta.maxTreeSize then
-			Trace(i .. ": early stop!")
+--			Trace(i .. ": early stop!")
 			break
 		end
 	end
@@ -763,7 +763,7 @@ perframes = {
 				local pops = GAMESTATE:GetPlayerState(pe):GetPlayerOptions("ModsLevel_Song")
 				local v = ease[efun](t, p[2], p[3]-p[2], 1)
 				pops[ p[1] ](pops, v, 1000000)
-				Trace("$$$ P"..pInd.." applied "..p[1].." from "..p[2].." to "..p[3].." with ease "..efun..": G.T = "..G.T..", value = "..v)
+--				Trace("$$$ P"..pInd.." applied "..p[1].." from "..p[2].." to "..p[3].." with ease "..efun..": G.T = "..G.T..", value = "..v)
 			end
 		end
 	end,
@@ -836,6 +836,18 @@ perframes = {
 			end
 		end
 	end,
+	RotateField = function(t, p)
+		p = p or {}
+		argS = p.argS or 0
+		argF = p.argF or 0
+		efun = p.efun or "t_linear"
+		papp = p.app or 3
+		for pInd = 1,2 do
+			if (papp == pInd or papp == 3) then 
+				prox[pInd][1]:GetWrapperState(2):rotationz(ease[efun](t, argS, argF-argS, 1))
+			end
+		end
+	end,
 }
 executes = {
 	CastButts = function(p)
@@ -897,6 +909,28 @@ executes = {
 			end
 		end
 	end,
+
+	VibeField = function(t, p)
+		p = p or {}
+		local magn = p.magn or 0
+		local papp = p.app or 3
+		for pInd = 1,2 do
+			if (papp == pInd or papp == 3) then 
+				prox[pInd][1]:GetWrapperState(2):effectmagnitude(magn, magn, 0)
+				prox[pInd][1]:GetWrapperState(2):vibrate()
+			end
+		end
+	end,
+
+	StopEffField = function(t, p)
+		p = p or {}
+		local papp = p.app or 3
+		for pInd = 1,2 do
+			if (papp == pInd or papp == 3) then 
+				prox[pInd][1]:GetWrapperState(2):stopeffect()
+			end
+		end
+	end,
 }
 
 
@@ -906,7 +940,7 @@ local messageList = {
 	-- [3]: optional table of arguments passed to message
 
 --	{  0.00, "RecenterProxy"},
-	{240.00 + math.random(0,3) * 4, "Buttergull"},
+	{244.00 + math.random()*8, "Buttergull"},
 }
 
 local executeList = {
@@ -964,12 +998,153 @@ local perframeList = {
 	{  0.00, 512.00, perframes.PerturbTrees },
 
 	{  0.00, 512.00, perframes.MoveTrees },
-
-	{ 0.00,  2.00, perframes.ApplyMod, {"Tipsy", 0, 1, "inQuad"} },
-	{ 2.00,  4.00, perframes.ApplyMod, {"Tipsy", 1, 0, "inQuad"} },
-	{ 4.00,  6.00, perframes.ApplyMod, {"Tiny2", 0, 1, "inQuad", 2} },
-	{ 6.00,  8.00, perframes.ApplyMod, {"Tiny2", 1, 0, "inQuad", 2} },
 }
+
+
+-- Easing mods construction!
+local prevMagn = 0
+local lastMagn = 0
+
+for _,iOut in pairs({16, 80, 144, 272, 304}) do
+	for i = iOut,iOut+28,1 do
+		local rr = (i%2 > 0.999)
+		local nextMagn = (i >= iOut+27 or i == iOut+14 or i == iOut+15) and lastMagn or 2
+		for j = 1,4 do
+			local jj = (rr ~= (j%2 == 1))
+			perframeList[#perframeList+1] = {
+				i,
+				i+1,
+				perframes.ApplyMod,
+				{"MoveZ"..j, jj and prevMagn or -prevMagn, jj and -nextMagn or nextMagn, "inQuad"}
+			}
+		end
+		prevMagn = nextMagn
+	end
+end
+
+for i = 66,78,4 do
+	for j = 1,4 do
+		perframeList[#perframeList+1] = {
+			i,
+			i+0.5,
+			perframes.ApplyMod,
+			{"Tiny"..j, 0, 1, "inCubic"}
+		}
+		perframeList[#perframeList+1] = {
+			i+0.5,
+			i+1.0,
+			perframes.ApplyMod,
+			{"Tiny"..j, 1, 0, "inCubic"}
+		}
+		perframeList[#perframeList+1] = {
+			i+1.0,
+			i+2.0,
+			perframes.ApplyMod,
+			{"Tiny"..j, 0, 0, "inCubic"}
+		}
+	end
+end
+
+
+for _,bCoarse in pairs({116, 120, 124, 132, 136}) do
+	for i = 0,3 do
+		local bFine = bCoarse + i
+		local iPar = (i == 3) and 0 or (2 * (i%2) - 1)
+		for j = 1,4 do
+			perframeList[#perframeList+1] = {
+				bFine-0.2,
+				bFine,
+				perframes.ApplyMod,
+				{"MoveY"..j, 0, (j-2.5) * iPar*0.3, "inQuad", 1}
+			}
+			perframeList[#perframeList+1] = {
+				bFine-0.2,
+				bFine,
+				perframes.ApplyMod,
+				{"MoveY"..j, 0, (j-2.5) * iPar*-0.3, "inQuad", 2}
+			}
+			perframeList[#perframeList+1] = {
+				bFine,
+				bFine+0.9,
+				perframes.ApplyMod,
+				{"MoveY"..j, (j-2.5) * iPar*0.3, 0, "inQuad", 1}
+			}
+			perframeList[#perframeList+1] = {
+				bFine,
+				bFine+0.9,
+				perframes.ApplyMod,
+				{"MoveY"..j, (j-2.5) * iPar*-0.3, 0, "inQuad", 2}
+			}
+		end
+	end
+end
+
+
+
+for i = 1,6 do
+	local bCoarse = 176 + 4 * (i-1)
+	local maxAngle = 24 * math.sqrt(i/6)
+	local angleSgn = {0, -1, 1, -1, 1, 0, 0}
+	for j = 1,#angleSgn-1 do
+		local bFine = bCoarse+(j-1)*2/3		
+		perframeList[#perframeList+1] = {
+			bFine,
+			bFine+2/3,
+			perframes.RotateField,
+			{
+				argS = maxAngle*angleSgn[j],
+				argF = maxAngle*angleSgn[j+1],
+				eFun = "outQuad",
+				papp = 1,
+			},
+		}
+		perframeList[#perframeList+1] = {
+			bFine,
+			bFine+2/3,
+			perframes.RotateField,
+			{
+				argS = maxAngle*angleSgn[j]  *-1,
+				argF = maxAngle*angleSgn[j+1]*-1,
+				eFun = "outQuad",
+				papp = 2,
+			},
+		}
+	end
+end
+
+local endingVibeBeatStart = 320
+for i = 0,2 do
+	executeList[#executeList+1] = {
+		endingVibeBeatStart     + i*4,
+		executes.VibeField,
+		{
+			magn = (i+1)*0.3,
+			papp = 3,
+		},
+	}
+	executeList[#executeList+1] = {
+		endingVibeBeatStart + 3 + i*4,
+		executes.StopEffField,
+		{
+			papp = 3,
+		},
+	}
+end
+
+
+
+
+
+
+function timetableCompare(a,b)
+	return a[1] < b[1]
+end
+
+
+table.sort(messageList, timetableCompare)
+table.sort(executeList, timetableCompare)
+table.sort(perframeList, timetableCompare)
+
 
 -- Time-based effects.
 function ButtUpdate(self)
@@ -1058,6 +1233,139 @@ modsTable = {
 		
 --		{   0.0,	"ScrollSpeed",	niceSpeed,    8.0,	3}, 
 		{   0.0,	"Dark",				  0.5,    8.0,	3}, 
+
+		{  16.0,	"ShrinkLinear",		  0.2,    2.0,	3}, 
+		{  44.0,	"ShrinkLinear",		  0.0,    2.0,	3}, 
+
+
+		{  46.0,	"Wave",		 		  0.3,    2.0,	3}, 
+
+		{  51.00 - 0.1,	"MoveX1",			 -1.0,    0.1,	1},
+		{  51.00 - 0.1,	"MoveX4",			  1.0,    0.1,	2},
+		{  51.25 - 0.1,	"MoveX2",			 -1.0,    0.1,	1},
+		{  51.25 - 0.1,	"MoveX3",			  1.0,    0.1,	2},
+		{  51.50 - 0.1,	"MoveX3",			 -1.0,    0.1,	1},
+		{  51.50 - 0.1,	"MoveX2",			  1.0,    0.1,	2},
+		{  51.75 - 0.1,	"MoveX4",			 -1.0,    0.1,	1},
+		{  51.75 - 0.1,	"MoveX1",			  1.0,    0.1,	2},
+
+		{  55.00 - 0.1,	"MoveX4",			  0.0,    0.1,	1},
+		{  55.00 - 0.1,	"MoveX1",			  0.0,    0.1,	2},
+		{  55.25 - 0.1,	"MoveX3",			  0.0,    0.1,	1},
+		{  55.25 - 0.1,	"MoveX2",			  0.0,    0.1,	2},
+		{  55.50 - 0.1,	"MoveX2",			  0.0,    0.1,	1},
+		{  55.50 - 0.1,	"MoveX3",			  0.0,    0.1,	2},
+		{  55.75 - 0.1,	"MoveX1",			  0.0,    0.1,	1},
+		{  55.75 - 0.1,	"MoveX4",			  0.0,    0.1,	2},
+
+		{  59.00 - 0.1,	"MoveX4",			  1.0,    0.1,	1},
+		{  59.00 - 0.1,	"MoveX1",			 -1.0,    0.1,	2},
+		{  59.25 - 0.1,	"MoveX3",			  1.0,    0.1,	1},
+		{  59.25 - 0.1,	"MoveX2",			 -1.0,    0.1,	2},
+		{  59.50 - 0.1,	"MoveX2",			  1.0,    0.1,	1},
+		{  59.50 - 0.1,	"MoveX3",			 -1.0,    0.1,	2},
+		{  59.75 - 0.1,	"MoveX1",			  1.0,    0.1,	1},
+		{  59.75 - 0.1,	"MoveX4",			 -1.0,    0.1,	2},
+
+		{  63.00 - 0.1,	"MoveX1",			  0.0,    0.1,	1},
+		{  63.00 - 0.1,	"MoveX4",			  0.0,    0.1,	2},
+		{  63.25 - 0.1,	"MoveX2",			  0.0,    0.1,	1},
+		{  63.25 - 0.1,	"MoveX3",			  0.0,    0.1,	2},
+		{  63.50 - 0.1,	"MoveX3",			  0.0,    0.1,	1},
+		{  63.50 - 0.1,	"MoveX2",			  0.0,    0.1,	2},
+		{  63.75 - 0.1,	"MoveX4",			  0.0,    0.1,	1},
+		{  63.75 - 0.1,	"MoveX1",			  0.0,    0.1,	2},
+
+		{  78.0,	"Wave",		 		  0.0,    2.0,	3}, 
+
+		{  80.0,	"ShrinkLinear",		  0.2,    2.0,	3}, 
+		{  80.0,	"AttenuateX",		  1.0,    2.0,	3}, 
+		{ 108.0,	"AttenuateX",		  0.0,    2.0,	3}, 
+		{ 108.0,	"ShrinkLinear",		  0.0,    2.0,	3}, 
+
+		{ 110.0,	"Wave",		 		  0.6,    2.0,	3}, 
+
+		{ 142.0,	"Wave",		 		  0.0,    2.0,	3}, 
+
+		{ 144.0,	"ShrinkLinear",		  0.3,    2.0,	3}, 
+		{ 144.0,	"AttenuateX",		  2.0,    2.0,	3}, 
+		{ 172.0,	"AttenuateX",		  0.0,    2.0,	3}, 
+		{ 172.0,	"ShrinkLinear",		  0.0,    2.0,	3}, 
+
+
+		{ 176.0,	"Expand",			  1.0,   28.0,	3}, 
+		{ 179.0-0.1,	"Stealth",			  0.8,    0.1,	3}, 
+		{ 179.0-0.0,	"Stealth",			  0.0,    1.0,	3}, 
+		{ 187.0-0.1,	"Stealth",			  0.8,    0.1,	3}, 
+		{ 187.0-0.0,	"Stealth",			  0.0,    1.0,	3}, 
+		{ 195.0-0.1,	"Stealth",			  0.8,    0.1,	3}, 
+		{ 195.0-0.0,	"Stealth",			  0.0,    1.0,	3}, 
+		{ 203.0-0.1,	"Stealth",			  0.8,    0.1,	3}, 
+		{ 203.0-0.0,	"Stealth",			  0.0,    1.0,	3}, 
+
+		{ 204.0,	"Expand",			  0.0,    4.0,	3}, 
+
+
+		{ 204.0,	"DrunkSpeed",		  0.2,    0.125,	3}, 
+		{ 204.0,	"Tipsy",			  0.3,    4.0,	3}, 
+		{ 208.0,	"Drunk",			  0.3,   16.0,	3}, 
+		{ 208.0,	"Tipsy",			  0.7,   16.0,	3}, 
+
+		{ 210.00 - 0.1,	"ConfusionOffset1",	  PI*0.5, 0.5,	3},
+		{ 210.00 - 0.1,	"ConfusionOffset4",	 -PI*0.5, 0.5,	3},
+		{ 210.50 - 0.1,	"ConfusionOffset2",	  PI*1.0, 0.5,	3},
+		{ 210.50 - 0.1,	"ConfusionOffset3",	  PI*2.0, 0.5,	3},
+		{ 214.0,	"ConfusionOffset1",	  0.0,	  1.0,	3},
+		{ 214.0,	"ConfusionOffset2",	  0.0,	  1.0,	3},
+		{ 214.0,	"ConfusionOffset3",	  0.0,	  1.0,	3},
+		{ 214.0,	"ConfusionOffset4",	  0.0,	  1.0,	3},
+
+		{ 218.00 - 0.1,	"ConfusionOffset1",	  PI*0.5, 0.5,	3},
+		{ 218.00 - 0.1,	"ConfusionOffset4",	 -PI*0.5, 0.5,	3},
+		{ 218.50 - 0.1,	"ConfusionOffset2",	 -PI*1.0, 0.5,	3},
+		{ 218.50 - 0.1,	"ConfusionOffset3",	 -PI*2.0, 0.5,	3},
+		{ 222.0,	"ConfusionOffset1",	  0.0,	  1.0,	3},
+		{ 222.0,	"ConfusionOffset2",	  0.0,	  1.0,	3},
+		{ 222.0,	"ConfusionOffset3",	  0.0,	  1.0,	3},
+		{ 222.0,	"ConfusionOffset4",	  0.0,	  1.0,	3},
+
+		{ 226.00 - 0.1,	"ConfusionOffset1",	  PI*0.5, 0.5,	3},
+		{ 226.00 - 0.1,	"ConfusionOffset4",	 -PI*0.5, 0.5,	3},
+		{ 226.50 - 0.1,	"ConfusionOffset2",	  PI*1.0, 0.5,	3},
+		{ 226.50 - 0.1,	"ConfusionOffset3",	  PI*2.0, 0.5,	3},
+		{ 230.0,	"ConfusionOffset1",	  0.0,	  1.0,	3},
+		{ 230.0,	"ConfusionOffset2",	  0.0,	  1.0,	3},
+		{ 230.0,	"ConfusionOffset3",	  0.0,	  1.0,	3},
+		{ 230.0,	"ConfusionOffset4",	  0.0,	  1.0,	3},
+
+		{ 232.0,	"Drunk",			  0.0,    8.0,	3}, 
+		{ 232.0,	"Tipsy",			  0.0,    8.0,	3}, 
+
+		{ 234.00 - 0.1,	"ConfusionOffset1",	  PI*0.5, 0.5,	3},
+		{ 234.00 - 0.1,	"ConfusionOffset4",	 -PI*0.5, 0.5,	3},
+		{ 234.50 - 0.1,	"ConfusionOffset2",	 -PI*1.0, 0.5,	3},
+		{ 234.50 - 0.1,	"ConfusionOffset3",	 -PI*2.0, 0.5,	3},
+		{ 238.0,	"ConfusionOffset1",	  0.0,	  1.0,	3},
+		{ 238.0,	"ConfusionOffset2",	  0.0,	  1.0,	3},
+		{ 238.0,	"ConfusionOffset3",	  0.0,	  1.0,	3},
+		{ 238.0,	"ConfusionOffset4",	  0.0,	  1.0,	3},
+
+
+		{ 239.0,	"Flip",				  0.5,	  1.0,	3},
+		{ 239.0,	"Brake",			  1.0,	  1.0,	3},
+
+		{ 252.0,	"Flip",	  			  0.0,	  4.0,	3},
+		{ 252.0,	"Brake",			  0.0,	  4.0,	3},
+
+
+
+		{ 270.0,	"ShrinkLinear",		  0.4,    2.0,	3}, 
+		{ 270.0,	"AttenuateX",		  3.0,    2.0,	3}, 
+		{ 332.0,	"AttenuateX",		  0.0,    2.0,	3}, 
+		{ 332.0,	"ShrinkLinear",		  0.0,    2.0,	3}, 
+
+		{ 334.0-0.1,	"Dark",	  			  1.0,	  0.1,	3},
+
 }
 _FG_[#_FG_ + 1] = LoadActor("./modsHQ.lua", {modsTable, 0.009, false})
 
