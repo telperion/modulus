@@ -5,6 +5,7 @@
 --		
 --		Author: 	Telperion
 --		Date: 		2018-11-25
+--		Target:		SM5.1.0b1+
 --		Version:	0.5 -prototype-
 --
 --
@@ -33,9 +34,10 @@ G.Zmin = -5
 telp = nil
 
 
-if G.abort
-	return {}
+if G.abort then
+	return Def.ActorFrame {}
 end
+
 
 -- Load helpful support functions and constants.
 local whereTheFlipAmI = GAMESTATE:GetCurrentSong():GetSongDir()

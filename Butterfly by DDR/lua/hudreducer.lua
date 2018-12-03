@@ -50,12 +50,13 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 			pops = GAMESTATE:GetPlayerState("PlayerNumber_P"..pn):GetPlayerOptions("ModsLevel_Preferred");
 			if pops then 
 				-- Changing the fail setting works well here.
-				-- pops:FailSetting('FailType_Off');
+				pops:FailSetting('FailType_Off');
+
 				prevTN1, didItWork = pops:Mirror(false);
 				prevTN2, didItWork = pops:Left(false);
 				prevTN3, didItWork = pops:Right(false);
 				prevTN4, didItWork = pops:Shuffle(false);
-				prevTN5, didItWork = pops:SoftShuffle(false);
+				prevTN5, didItWork = pops:SoftShuffle(true);
 				prevTN6, didItWork = pops:SuperShuffle(false);
 		
 				if tryToSetNoteskin then
@@ -73,7 +74,7 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 					end
 				end
 				
-				if prevTN1 or prevTN2 or prevTN3 or prevTN4 or prevTN5 or prevTN6 then
+				if prevTN1 or prevTN2 or prevTN3 or prevTN4 or not prevTN5 or prevTN6 then
 					-- No turn mods! C'mon!!
 					hadToEraseTurnMods = true;
 				end					
