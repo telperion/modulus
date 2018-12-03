@@ -7,7 +7,7 @@
 --
 -------------------------------------------------------------------------------
 
-buttVariety, flapSpeed = unpack(...)
+local buttVariety, flapSpeed = unpack(...)
 buttVariety = buttVariety	or 0
 flapSpeed 	= flapSpeed 	or 1.0	-- seconds per full cycle
 flapCrisp = 0.2						-- proportion spent flapping up/in

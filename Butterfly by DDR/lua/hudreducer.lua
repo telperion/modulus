@@ -41,6 +41,17 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 			hamburger:GetChild("Overlay" ):decelerate(1.0 / GAMESTATE:GetSongBPS()):diffusealpha(0.0);
 			hamburger:GetChild("Underlay"):decelerate(1.0 / GAMESTATE:GetSongBPS()):diffusealpha(0.0);
 		end
+
+		-- Random one of the four permuted edits, and set both P1 and P2 to this chosen chart.
+		local stepChoices = GAMESTATE:GetCurrentSong():GetStepsByStepsType('StepsType_Dance_Single')
+		local stepChoicesReduced = {}
+		for _,sci in pairs(stepChoices) do
+			if sci:GetDifficulty() == 'Difficulty_Edit' then
+				stepChoicesReduced[#stepChoicesReduced + 1] = sci
+			end
+		end
+		local stepSelect = math.random(#stepChoicesReduced)
+		local pickedNewCharts = false
 				
 		-- Try to set the noteskin to "cyber" for each player. <- This behavior has been disabled for this file.
 		local hadToSetNoteskin = false;
@@ -56,7 +67,7 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 				prevTN2, didItWork = pops:Left(false);
 				prevTN3, didItWork = pops:Right(false);
 				prevTN4, didItWork = pops:Shuffle(false);
-				prevTN5, didItWork = pops:SoftShuffle(true);
+				prevTN5, didItWork = pops:SoftShuffle(false);
 				prevTN6, didItWork = pops:SuperShuffle(false);
 		
 				if tryToSetNoteskin then
@@ -74,9 +85,15 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 					end
 				end
 				
-				if prevTN1 or prevTN2 or prevTN3 or prevTN4 or not prevTN5 or prevTN6 then
+				if prevTN1 or prevTN2 or prevTN3 or prevTN4 or prevTN5 or prevTN6 then
 					-- No turn mods! C'mon!!
 					hadToEraseTurnMods = true;
+				end			
+
+				if GAMESTATE:GetCurrentSteps(pn-1):GetDifficulty() == 'Difficulty_Challenge' then
+	--				SCREENMAN:SystemMessage('Switching to '..whichMix..' (P'..pn..')')
+					GAMESTATE:SetCurrentSteps(pn-1, stepChoicesReduced[stepSelect])
+					pickedNewCharts = true
 				end					
 			end
 			
@@ -98,7 +115,7 @@ HUDReducer[#HUDReducer+1] = Def.Quad {
 			end
 		end
 				
-		if hadToSetNoteskin or hadToEraseTurnMods then
+		if hadToSetNoteskin or hadToEraseTurnMods or pickedNewCharts then
 			-- We changed the noteskin! 
 			-- But the song needs to be restarted or it won't take.
 			SCREENMAN:SetNewScreen("ScreenGameplay");

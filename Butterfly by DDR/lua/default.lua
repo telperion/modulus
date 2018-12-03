@@ -4,9 +4,9 @@
 --		Special Content
 --		
 --		Author: 	Telperion
---		Date: 		2018-11-25
+--		Date: 		2018-12-02
 --		Target:		SM5.1.0b1+
---		Version:	0.5 -prototype-
+--		Version:	0.8 -prototype-
 --
 --
 --		A fresh take on a classic song.
@@ -529,9 +529,10 @@ function CalculateTreePositions(setupOnce)
 	end
 end
 
+local colorMystery = math.sqrt(treeMeta.nTrees)
 function CalculateTreePositions_Cheap()
 	for i = 1,treeMeta.nTrees do
-		local treeRGB = telp.HSV2RGB({0.3-perturbances[i].coloring*0.3, 1.0, 0.5 + perturbances[i].coloring*0.5})
+		local treeRGB = telp.HSV2RGB({0.3-perturbances[i].coloring*0.3*(i%colorMystery)/colorMystery, 1.0, 0.5 + perturbances[i].coloring*0.5})
 		local tZ = telp.clamp(treeZRec[i], G.Zmin, G.Zmax)*1.2+0.5
 		local tA = 1 - telp.clamp(treeZRec[i], G.Zmin*0.1 + G.Zmax*0.9, G.Zmax)*0.8
 		for j = 1,2 do 	-- leaves, branches
@@ -637,6 +638,31 @@ for iButty = 1,butts.nButts do
 		end,
 	}
 end
+
+
+-- big butt
+local bigButt = LoadActor('./butt.lua', {5, 8 / G.BPS})
+
+_FG_[#_FG_ + 1] = Def.ActorFrame {
+	bigButt,
+	Name = "BigButt",
+	InitCommand = function(self)
+		self:xy(G.W*0.5, G.H*1.5)
+			:z((G.Zmax + G.Zmin)*0.5)
+			:diffusealpha(0)
+			:zoom(1)
+			:blend("BlendMode_Add")
+	end,
+	OnCommand = function(self)
+		self:visible(false)
+	end,
+	BigButtEnergyMessageCommand = function(self)
+		self:visible(true)
+			:decelerate(12 / G.BPS)
+			:xy(G.W*0.5, G.H*0.5)
+			:diffusealpha(0.8)
+	end,
+}
 
 
 -- ehehe
@@ -792,10 +818,10 @@ perframes = {
 		rev = p.rev or false
 
 		if ind > 0 then
-			perturbances[ind].coloring = rev and t or 1-t
+			perturbances[ind].coloring = rev and 1-t or t
 		else
 			for i=1,treeMeta.nTrees do
-				perturbances[i].coloring = rev and t or 1-t
+				perturbances[i].coloring = rev and 1-t or t
 			end
 		end
 	end,
@@ -870,10 +896,10 @@ executes = {
 			if butts.buttActors[i] then
 --				butts.buttActors[i]:GetChild():z()
 --				butts.buttActors[i]:GetChild():z()
-				local xOrigin = G.W * (0.5 + (math.random()-0.5)*0.8*(corn == 'D' and 2 or 1))
-				local yOrigin = G.H * 1.3
+				local xOrigin = G.W * (0.5 + (math.random()-0.5)*0.6*(corn == 'D' and 3 or 1))
+				local yOrigin = G.H * 1.4
 
-				butts.buttDest[i] = {G.W * (0.5 + (math.random()-0.5)*0.8*(corn == 'D' and 2 or 1)), G.H * -0.3}
+				butts.buttDest[i] = {G.W * (0.5 + (math.random()-0.5)*0.6*(corn == 'D' and 3 or 1)), G.H * -0.2}
 				if corn == 'L' then
 					xOrigin = G.W * -0.2
 					if math.random() < 0.5 then
@@ -949,6 +975,8 @@ local messageList = {
 
 --	{  0.00, "RecenterProxy"},
 	{244.00 + math.random()*8, "Buttergull"},
+
+	{320.00, "BigButtEnergy"},
 }
 
 local executeList = {
@@ -962,7 +990,7 @@ local executeList = {
 
 	{ 28.00, executes.CastButts, {'L',  1,  6,  4, 8} },
 	{ 28.00, executes.CastButts, {'R',  7, 12,  4, 8} },
-	{ 36.00, executes.CastButts, {'C', 13, 24,  2, 8} },
+	{ 32.00, executes.CastButts, {'C', 13, 24,  4, 8} },
 	{ 36.00, executes.CastButts, {'L', 25, 30,  4, 8} },
 	{ 36.00, executes.CastButts, {'R', 31, 36,  4, 8} },
 
@@ -982,13 +1010,13 @@ local executeList = {
 
 	{300.00, executes.CastButts, {'L',  1,  6,  4, 8} },
 	{300.00, executes.CastButts, {'R',  7, 12,  4, 8} },
-	{308.00, executes.CastButts, {'C', 13, 24,  2, 8} },
+	{304.00, executes.CastButts, {'C', 13, 24,  4, 8} },
 	{308.00, executes.CastButts, {'L', 25, 30,  4, 8} },
 	{308.00, executes.CastButts, {'R', 31, 36,  4, 8} },
 
 	{316.00, executes.CastButts, {'L', 13, 18,  4, 8} },
 	{316.00, executes.CastButts, {'R', 19, 24,  4, 8} },
-	{324.00, executes.CastButts, {'C', 25, 36,  2, 8} },
+	{320.00, executes.CastButts, {'C', 25, 36,  4, 8} },
 	{324.00, executes.CastButts, {'L', 37, 42,  4, 8} },
 	{324.00, executes.CastButts, {'R', 43, 48,  4, 8} },
 }
@@ -1004,6 +1032,9 @@ local perframeList = {
 	{  0.00,  16.00, perframes.FurlFog },
 
 	{  0.00, 512.00, perframes.PerturbTrees },
+
+	{176.00, 204.00, perframes.ColorTrees },
+	{208.00, 236.00, perframes.ColorTrees, {rev = true} },
 
 	{  0.00, 512.00, perframes.MoveTrees },
 }
@@ -1091,7 +1122,7 @@ end
 
 for i = 1,6 do
 	local bCoarse = 176 + 4 * (i-1)
-	local maxAngle = 24 * math.sqrt(i/6)
+	local maxAngle = 18 * math.sqrt(i/6)
 	local angleSgn = {0, -1, 1, -1, 1, 0, 0}
 	for j = 1,#angleSgn-1 do
 		local bFine = bCoarse+(j-1)*2/3		
@@ -1242,7 +1273,7 @@ modsTable = {
 --		{   0.0,	"ScrollSpeed",	niceSpeed,    8.0,	3}, 
 		{   0.0,	"Dark",				  0.5,    8.0,	3}, 
 
-		{  16.0,	"ShrinkLinear",		  0.2,    2.0,	3}, 
+		{  16.0,	"ShrinkLinear",		  0.15,    2.0,	3}, 
 		{  44.0,	"ShrinkLinear",		  0.0,    2.0,	3}, 
 
 
@@ -1295,7 +1326,7 @@ modsTable = {
 
 		{ 142.0,	"Wave",		 		  0.0,    2.0,	3}, 
 
-		{ 144.0,	"ShrinkLinear",		  0.3,    2.0,	3}, 
+		{ 144.0,	"ShrinkLinear",		  0.25,    2.0,	3}, 
 		{ 144.0,	"AttenuateX",		  2.0,    2.0,	3}, 
 		{ 172.0,	"AttenuateX",		  0.0,    2.0,	3}, 
 		{ 172.0,	"ShrinkLinear",		  0.0,    2.0,	3}, 
@@ -1367,7 +1398,7 @@ modsTable = {
 
 
 
-		{ 270.0,	"ShrinkLinear",		  0.4,    2.0,	3}, 
+		{ 270.0,	"ShrinkLinear",		  0.3,    2.0,	3}, 
 		{ 270.0,	"AttenuateX",		  3.0,    2.0,	3}, 
 		{ 332.0,	"AttenuateX",		  0.0,    2.0,	3}, 
 		{ 332.0,	"ShrinkLinear",		  0.0,    2.0,	3}, 
