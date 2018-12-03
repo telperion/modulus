@@ -6,7 +6,7 @@
 --		Author: 	Telperion
 --		Date: 		2018-12-02
 --		Target:		SM5.1.0b1+
---		Version:	0.8 -prototype-
+--		Version:	0.85 -prototype-
 --
 --
 --		A fresh take on a classic song.
@@ -139,7 +139,7 @@ for pn = 1,2 do
 				self:GetWrapperState(1)					-- Encase in a wrapper state that cancels out the original position.
 					:xy(-self:GetTarget():GetX(), -self:GetTarget():GetY())
 				self:GetWrapperState(2)					-- Then encase in a wrapper state that can be individually moved as desired.
-					:xy(G.W*(0.6*pnLoc - 0.4), G.H*0.5)
+					:xy(G.W*(0.5*pnLoc - 0.25), G.H*0.9)
 					:zoom(0.7)							-- Judgment doesn't need to be that big lol
 				Trace("### Judgment proxy for P"..pnLoc.." location set!")
 			else
@@ -841,7 +841,7 @@ perframes = {
 				if treeActors[i][j] then
 					treeActors[i][j]
 						:xy(
-							G.W*(0.5 + (tPose-1)*0.4 + 0.1*math.sin(2*PI*(tSweep - tRow) / 7)),
+							G.W*(0.5 + (tPose-1)*0.4 + 0.15*math.sin(2*PI*(tSweep - tRow) / 5)),
 							G.H*1.0
 						)
 						:z(tZ)
@@ -1327,7 +1327,7 @@ modsTable = {
 		{ 142.0,	"Wave",		 		  0.0,    2.0,	3}, 
 
 		{ 144.0,	"ShrinkLinear",		  0.25,    2.0,	3}, 
-		{ 144.0,	"AttenuateX",		  2.0,    2.0,	3}, 
+		{ 144.0,	"AttenuateX",		  1.5,    2.0,	3}, 
 		{ 172.0,	"AttenuateX",		  0.0,    2.0,	3}, 
 		{ 172.0,	"ShrinkLinear",		  0.0,    2.0,	3}, 
 
@@ -1399,7 +1399,7 @@ modsTable = {
 
 
 		{ 270.0,	"ShrinkLinear",		  0.3,    2.0,	3}, 
-		{ 270.0,	"AttenuateX",		  3.0,    2.0,	3}, 
+		{ 270.0,	"AttenuateX",		  2.0,    2.0,	3}, 
 		{ 332.0,	"AttenuateX",		  0.0,    2.0,	3}, 
 		{ 332.0,	"ShrinkLinear",		  0.0,    2.0,	3}, 
 
