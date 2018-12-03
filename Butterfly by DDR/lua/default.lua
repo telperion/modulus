@@ -24,7 +24,7 @@ G.msg = 0
 G.exe = 0
 G.per = 0
 G.P = {}
-G.bypass = false
+G.bypass = true
 
 G.Zmax =  5
 G.Zmin = -5
@@ -740,7 +740,36 @@ function TreeMoveCtrl(t)
 	return b
 end
 
+
+
+
 perframes = {
+	ApplyMod = function(t, p)
+		-- p[1]:	mod name
+		-- p[2]:	start strength
+		-- p[3]:	end strength
+		-- p[4]: *	ease function
+		-- p[5]: *	player application (3 = both)
+
+		if not p then return end
+		if #p < 3 then return end
+
+		local efun = p[4] and p[4] or "t_linear"
+		local papp = p[5] and p[5] or 3
+
+		for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
+			pInd = tonumber(string.match(pe, "[0-9]+"))
+			if papp == pInd or papp == 3 then
+				local pops = GAMESTATE:GetPlayerState(pe):GetPlayerOptions("ModsLevel_Song")
+				local v = ease[efun](t, p[2], p[3]-p[2], 1)
+				pops[ p[1] ](pops, v, 1000000)
+				Trace("$$$ P"..pInd.." applied "..p[1].." from "..p[2].." to "..p[3].." with ease "..efun..": G.T = "..G.T..", value = "..v)
+			end
+		end
+	end,
+
+
+
 	PerturbTrees = function(t)		
 		for i = 1,treeMeta.nTrees do
 			perturbances[i].spreadin = 0.2 * math.cos(2*PI*G.T / 1)
@@ -782,7 +811,7 @@ perframes = {
 							G.H*1.0
 						)
 						:z(tZ)
-						:visible(tZ > G.Zmin)
+						:visible((tZ > G.Zmin) and not G.bypass)
 				end
 			end
 		end
@@ -935,6 +964,11 @@ local perframeList = {
 	{  0.00, 512.00, perframes.PerturbTrees },
 
 	{  0.00, 512.00, perframes.MoveTrees },
+
+	{ 0.00,  2.00, perframes.ApplyMod, {"Tipsy", 0, 1, "inQuad"} },
+	{ 2.00,  4.00, perframes.ApplyMod, {"Tipsy", 1, 0, "inQuad"} },
+	{ 4.00,  6.00, perframes.ApplyMod, {"Tiny2", 0, 1, "inQuad", 2} },
+	{ 6.00,  8.00, perframes.ApplyMod, {"Tiny2", 1, 0, "inQuad", 2} },
 }
 
 -- Time-based effects.
