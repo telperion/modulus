@@ -18,6 +18,8 @@
 local G = {}
 G.W = SCREEN_WIDTH
 G.H = SCREEN_HEIGHT
+G.M = SCREEN_HEIGHT / 480
+G.A = SCREEN_WIDTH / SCREEN_HEIGHT
 G.BPS = 145.0 / 60.0		-- GAMESTATE:GetSongBPS()
 G.T = 0
 G.T_offset = 0
@@ -629,7 +631,7 @@ for iButty = 1,butts.nButts do
 			self:visible(not G.bypass)
 				:accelerate(butts.buttSpeed[iButty] / G.BPS)
 				:xy(butts.buttDest[iButty][1], butts.buttDest[iButty][2])
-				:zoom(0.2)
+				:zoom(0.2 * G.M)
 				:z(G.Zmin)
 				:queuecommand("HideAway")
 		end,
@@ -650,7 +652,7 @@ _FG_[#_FG_ + 1] = Def.ActorFrame {
 		self:xy(G.W*0.5, G.H*1.5)
 			:z((G.Zmax + G.Zmin)*0.5)
 			:diffusealpha(0)
-			:zoom(1)
+			:zoom(1 * G.M)
 			:blend("BlendMode_Add")
 	end,
 	OnCommand = function(self)
@@ -673,7 +675,7 @@ _FG_[#_FG_ + 1] = Def.Sprite {
 		self:SetAllStateDelays(1 / (G.BPS * 13))
 			:xy(G.W*(math.random()*0.3+0.7), G.H*1.2)
 			:z(G.Zmax)
-			:zoom(1.5)
+			:zoom(1.5 * G.M)
 	end,
 	OnCommand = function(self)
 		self:visible(false)
@@ -682,7 +684,7 @@ _FG_[#_FG_ + 1] = Def.Sprite {
 		self:visible(true)
 			:accelerate(butts.buttSpeed[1] / G.BPS)
 			:xy(G.W*(math.random()*0.3), G.H*-0.2)
-			:zoom(0.2)
+			:zoom(0.2 * G.M)
 			:z(G.Zmin)
 			:queuecommand("HideAway")
 	end,
@@ -699,7 +701,7 @@ _FG_[#_FG_ + 1] = Def.Sprite {
 --]]
 
 function TreeMoveCtrl(t)
-	local b = 		  telp.clamp(t,   0, 334)  * 334 + 0.001
+	local b = 		  telp.clamp(t,   0, 334)  * 334 + 0.2
 
 	b = b -           telp.clamp(t,   0,  16)  * 16		-- intro A: suppression
 														-- intro B: move nice and linearly (NAOKI put down the shamisen)
@@ -937,7 +939,7 @@ executes = {
 				butts.buttActors[i] :xy(xOrigin, yOrigin)
 									:z(G.Zmax)
 									:rotationy(iDir / DEG_TO_RAD)
-									:zoom(2)
+									:zoom(2 * G.M)
 									:sleep(iSleep / G.BPS)
 									:queuecommand("FlyAway")
 			end
@@ -1262,6 +1264,9 @@ _FG_[#_FG_ + 1] = Def.ActorFrame {
 _FG_[#_FG_ + 1] = LoadActor("./hudreducer.lua")
 
 -- Load the mods table parser into this script.
+local pushX = G.A * 9/16
+pushX = pushX*pushX
+
 niceSpeed = (420 + 69) / 145			-- This song is 145 BPM.
 modsTable = {
 	-- [1]: beat start
@@ -1279,14 +1284,14 @@ modsTable = {
 
 		{  46.0,	"Wave",		 		  0.3,    2.0,	3}, 
 
-		{  51.00 - 0.1,	"MoveX1",			 -1.0,    0.1,	1},
-		{  51.00 - 0.1,	"MoveX4",			  1.0,    0.1,	2},
-		{  51.25 - 0.1,	"MoveX2",			 -1.0,    0.1,	1},
-		{  51.25 - 0.1,	"MoveX3",			  1.0,    0.1,	2},
-		{  51.50 - 0.1,	"MoveX3",			 -1.0,    0.1,	1},
-		{  51.50 - 0.1,	"MoveX2",			  1.0,    0.1,	2},
-		{  51.75 - 0.1,	"MoveX4",			 -1.0,    0.1,	1},
-		{  51.75 - 0.1,	"MoveX1",			  1.0,    0.1,	2},
+		{  51.00 - 0.1,	"MoveX1",			 -pushX,    0.1,	1},
+		{  51.00 - 0.1,	"MoveX4",			  pushX,    0.1,	2},
+		{  51.25 - 0.1,	"MoveX2",			 -pushX,    0.1,	1},
+		{  51.25 - 0.1,	"MoveX3",			  pushX,    0.1,	2},
+		{  51.50 - 0.1,	"MoveX3",			 -pushX,    0.1,	1},
+		{  51.50 - 0.1,	"MoveX2",			  pushX,    0.1,	2},
+		{  51.75 - 0.1,	"MoveX4",			 -pushX,    0.1,	1},
+		{  51.75 - 0.1,	"MoveX1",			  pushX,    0.1,	2},
 
 		{  55.00 - 0.1,	"MoveX4",			  0.0,    0.1,	1},
 		{  55.00 - 0.1,	"MoveX1",			  0.0,    0.1,	2},
@@ -1297,14 +1302,14 @@ modsTable = {
 		{  55.75 - 0.1,	"MoveX1",			  0.0,    0.1,	1},
 		{  55.75 - 0.1,	"MoveX4",			  0.0,    0.1,	2},
 
-		{  59.00 - 0.1,	"MoveX4",			  1.0,    0.1,	1},
-		{  59.00 - 0.1,	"MoveX1",			 -1.0,    0.1,	2},
-		{  59.25 - 0.1,	"MoveX3",			  1.0,    0.1,	1},
-		{  59.25 - 0.1,	"MoveX2",			 -1.0,    0.1,	2},
-		{  59.50 - 0.1,	"MoveX2",			  1.0,    0.1,	1},
-		{  59.50 - 0.1,	"MoveX3",			 -1.0,    0.1,	2},
-		{  59.75 - 0.1,	"MoveX1",			  1.0,    0.1,	1},
-		{  59.75 - 0.1,	"MoveX4",			 -1.0,    0.1,	2},
+		{  59.00 - 0.1,	"MoveX4",			  pushX,    0.1,	1},
+		{  59.00 - 0.1,	"MoveX1",			 -pushX,    0.1,	2},
+		{  59.25 - 0.1,	"MoveX3",			  pushX,    0.1,	1},
+		{  59.25 - 0.1,	"MoveX2",			 -pushX,    0.1,	2},
+		{  59.50 - 0.1,	"MoveX2",			  pushX,    0.1,	1},
+		{  59.50 - 0.1,	"MoveX3",			 -pushX,    0.1,	2},
+		{  59.75 - 0.1,	"MoveX1",			  pushX,    0.1,	1},
+		{  59.75 - 0.1,	"MoveX4",			 -pushX,    0.1,	2},
 
 		{  63.00 - 0.1,	"MoveX1",			  0.0,    0.1,	1},
 		{  63.00 - 0.1,	"MoveX4",			  0.0,    0.1,	2},
