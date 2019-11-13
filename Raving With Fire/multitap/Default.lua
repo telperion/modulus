@@ -229,6 +229,10 @@ local multitap_chart_sel = {
 	"Hard"
 }
 
+local noteskin_names = {
+	"shadow",
+	"shadow"
+}
 
 
 local qtzn_lookup = {}
@@ -395,6 +399,10 @@ local multitap_update_function = function()
 		local beat = GAMESTATE:GetSongBeat()
 
 		for pn = 1,2 do
+			local tex_color_interval = {
+				x = NOTESKIN:GetMetricFForNoteSkin("", "TapNoteNoteColorTextureCoordSpacingX", noteskin_names[pn]),
+				y = NOTESKIN:GetMetricFForNoteSkin("", "TapNoteNoteColorTextureCoordSpacingY", noteskin_names[pn]),
+			}
 			if multitap_chart_sel[pn] then
 				for mti,mt_desc in ipairs(multitaps[multitap_chart_sel[pn]]) do
 					mt_stats = calc_multitap_phase(mt_desc, beat)
@@ -403,7 +411,10 @@ local multitap_update_function = function()
 						multitap_actors[pn][mti]["frame"]:visible(true)
 														 :xy(TEST_px_per_lane * (mt_desc.lane - 2.5) + TEST_center_x,
 														 	 TEST_px_per_beat * mt_stats.pos + TEST_zero_y)
-						multitap_actors[pn][mti]["arrow"]:texturetranslate(0.125 * qtzn_tex[mt_stats.qtc], 0)
+						multitap_actors[pn][mti]["arrow"]:texturetranslate(
+							tex_color_interval["x"] * qtzn_tex[mt_stats.qtc],
+							tex_color_interval["y"] * qtzn_tex[mt_stats.qtc]
+							)
 
 						if mt_stats.rem > 1 then
 							multitap_actors[pn][mti]["count"]:visible(true)
@@ -432,10 +443,11 @@ end
 
 
 for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
-	local pn = tonumber(string.match(pe, "[0-9]+"));
+	local pn = tonumber(string.match(pe, "[0-9]+"))
 	
-	local pops = GAMESTATE:GetPlayerState(pe):GetPlayerOptions("ModsLevel_Song");
-	local noteskinName = pops:NoteSkin();
+	local pops = GAMESTATE:GetPlayerState(pe):GetPlayerOptions("ModsLevel_Song")
+	local noteskin_name = pops:NoteSkin()
+	noteskin_names[pn] = noteskin_name
 	
 	for mti = 1,multitap_max do
 		multitap_parent[#multitap_parent+1] = Def.ActorFrame {
@@ -450,7 +462,7 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 
 				Trace("=== Added multitap actor frame for P"..pn..", index "..i)
 			end,
-			NOTESKIN:LoadActorForNoteSkin("Down", "Tap Note", noteskinName)..{
+			NOTESKIN:LoadActorForNoteSkin("Down", "Tap Note", noteskin_name)..{
 				Name="MultitapArrowP"..pn.."_"..mti,
 				InitCommand=function(self)
 				end,
