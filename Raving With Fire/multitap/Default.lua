@@ -13,171 +13,175 @@
 -- Replace the contents of this table by using the Python chart utilities.
 -- MultitapsWorkflow(r'C:\path\to\simfile.sm')
 --
+-- TODO: move this to its own (ideally autogenerateable) file!
+--
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
-local multi_taps = {
-	{lane = 1, taps = {
-		  12.500,
-		  13.500,
-		  14.500,
-	},
-	{lane = 1, taps = {
-		  16.500,
-		  17.500,
-		  18.500,
-	},
-	{lane = 0, taps = {
-		  20.000,
-		  21.000,
-		  22.000,
-		  23.000,
-	},
-	{lane = 2, taps = {
-		  20.500,
-		  21.500,
-		  22.500,
-	},
-	{lane = 1, taps = {
-		  24.500,
-		  25.500,
-		  26.500,
-	},
-	{lane = 2, taps = {
-		  25.000,
-		  27.000,
-	},
-	{lane = 3, taps = {
-		  24.000,
-		  26.000,
-	},
-	{lane = 0, taps = {
-		  28.000,
-		  28.750,
-		  29.500,
-	},
-	{lane = 3, taps = {
-		  30.000,
-		  30.750,
-		  31.500,
-	},
-	{lane = 0, taps = {
-		  32.750,
-		  33.500,
-	},
-	{lane = 2, taps = {
-		  32.500,
-		  33.250,
-	},
-	{lane = 2, taps = {
-		  34.500,
-		  35.250,
-	},
-	{lane = 3, taps = {
-		  34.750,
-		  35.500,
-	},
-	{lane = 0, taps = {
-		  36.000,
-		  38.000,
-	},
-	{lane = 1, taps = {
-		  37.000,
-		  38.000,
-	},
-	{lane = 3, taps = {
-		  39.000,
-		  40.500,
-	},
-	{lane = 0, taps = {
-		  39.500,
-		  42.000,
-	},
-	{lane = 2, taps = {
-		  41.000,
-		  42.000,
-	},
-	{lane = 0, taps = {
-		  43.000,
-		  46.000,
-	},
-	{lane = 2, taps = {
-		  44.500,
-		  46.000,
-	},
-	{lane = 3, taps = {
-		  43.500,
-		  45.000,
-	},
-	{lane = 0, taps = {
-		  48.250,
-		  48.750,
-	},
-	{lane = 1, taps = {
-		  47.250,
-		  47.750,
-		  50.000,
-	},
-	{lane = 2, taps = {
-		  49.250,
-		  49.750,
-	},
-	{lane = 3, taps = {
-		  47.000,
-		  47.500,
-		  48.000,
-		  48.500,
-		  49.000,
-		  49.500,
-	},
-	{lane = 0, taps = {
-		  51.000,
-		  51.500,
-		  52.000,
-	},
-	{lane = 1, taps = {
-		  54.000,
-		  58.500,
-	},
-	{lane = 2, taps = {
-		  56.000,
-		  59.500,
-	},
-	{lane = 3, taps = {
-		  53.000,
-		  55.000,
-		  57.000,
-	},
-	{lane = 0, taps = {
-		  58.000,
-		  59.000,
-		  60.000,
-	},
-	{lane = 1, taps = {
-		  62.500,
-		  64.000,
-	},
-	{lane = 2, taps = {
-		  62.000,
-		  63.500,
-	},
-	{lane = 0, taps = {
-		  65.000,
-		  65.500,
-	},
-	{lane = 1, taps = {
-		  65.250,
-		  65.750,
-	},
-	{lane = 2, taps = {
-		  66.000,
-		  67.500,
-	},
-	{lane = 1, taps = {
-		  66.750,
-		  67.250,
-	},
-	{lane = 3, taps = {
-		  66.500,
-		  67.000,
+local multitaps = {
+	Hard = {
+		{lane = 1, taps = {
+			  12.500,
+			  13.500,
+			  14.500,
+		}},
+		{lane = 1, taps = {
+			  16.500,
+			  17.500,
+			  18.500,
+		}},
+		{lane = 0, taps = {
+			  20.000,
+			  21.000,
+			  22.000,
+			  23.000,
+		}},
+		{lane = 2, taps = {
+			  20.500,
+			  21.500,
+			  22.500,
+		}},
+		{lane = 1, taps = {
+			  24.500,
+			  25.500,
+			  26.500,
+		}},
+		{lane = 2, taps = {
+			  25.000,
+			  27.000,
+		}},
+		{lane = 3, taps = {
+			  24.000,
+			  26.000,
+		}},
+		{lane = 0, taps = {
+			  28.000,
+			  28.750,
+			  29.500,
+		}},
+		{lane = 3, taps = {
+			  30.000,
+			  30.750,
+			  31.500,
+		}},
+		{lane = 0, taps = {
+			  32.750,
+			  33.500,
+		}},
+		{lane = 2, taps = {
+			  32.500,
+			  33.250,
+		}},
+		{lane = 2, taps = {
+			  34.500,
+			  35.250,
+		}},
+		{lane = 3, taps = {
+			  34.750,
+			  35.500,
+		}},
+		{lane = 0, taps = {
+			  36.000,
+			  38.000,
+		}},
+		{lane = 1, taps = {
+			  37.000,
+			  38.000,
+		}},
+		{lane = 3, taps = {
+			  39.000,
+			  40.500,
+		}},
+		{lane = 0, taps = {
+			  39.500,
+			  42.000,
+		}},
+		{lane = 2, taps = {
+			  41.000,
+			  42.000,
+		}},
+		{lane = 0, taps = {
+			  43.000,
+			  46.000,
+		}},
+		{lane = 2, taps = {
+			  44.500,
+			  46.000,
+		}},
+		{lane = 3, taps = {
+			  43.500,
+			  45.000,
+		}},
+		{lane = 0, taps = {
+			  48.250,
+			  48.750,
+		}},
+		{lane = 1, taps = {
+			  47.250,
+			  47.750,
+			  50.000,
+		}},
+		{lane = 2, taps = {
+			  49.250,
+			  49.750,
+		}},
+		{lane = 3, taps = {
+			  47.000,
+			  47.500,
+			  48.000,
+			  48.500,
+			  49.000,
+			  49.500,
+		}},
+		{lane = 0, taps = {
+			  51.000,
+			  51.500,
+			  52.000,
+		}},
+		{lane = 1, taps = {
+			  54.000,
+			  58.500,
+		}},
+		{lane = 2, taps = {
+			  56.000,
+			  59.500,
+		}},
+		{lane = 3, taps = {
+			  53.000,
+			  55.000,
+			  57.000,
+		}},
+		{lane = 0, taps = {
+			  58.000,
+			  59.000,
+			  60.000,
+		}},
+		{lane = 1, taps = {
+			  62.500,
+			  64.000,
+		}},
+		{lane = 2, taps = {
+			  62.000,
+			  63.500,
+		}},
+		{lane = 0, taps = {
+			  65.000,
+			  65.500,
+		}},
+		{lane = 1, taps = {
+			  65.250,
+			  65.750,
+		}},
+		{lane = 2, taps = {
+			  66.000,
+			  67.500,
+		}},
+		{lane = 1, taps = {
+			  66.750,
+			  67.250,
+		}},
+		{lane = 3, taps = {
+			  66.500,
+			  67.000,
+		}},
 	},
 }
 
@@ -187,7 +191,7 @@ local multi_taps = {
 --
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 
-local BPS = GAMESTATE:GetSongBPS();
+local BPS = GAMESTATE:GetSongBPS()
 
 local multitap_parent = Def.ActorFrame {
 	OnCommand = function(self)
@@ -195,14 +199,35 @@ local multitap_parent = Def.ActorFrame {
 	end
 };
 
+local multitap_error = false
+local multitap_previsible = 4
+local multitap_elasticity = 1
+
+local multitap_max = 0
+for _,mt_list in pairs(multitaps) do
+	if multitap_max < #mt_list then
+		multitap_max = #mt_list
+	end
+end
+
+-- Initialize the multitap actor list.
+-- 
+-- 	Player number (1 or 2)
+--		Multitap index
+--			{frame, arrow, count}
 local multitap_actors = {
 	{},
 	{}
 }
-
-local multitap_error = false
-local multitap_previsible = 4
-local multitap_elasticity = 1
+for pn = 1,2 do
+	for i = 1,multitap_max do
+		multitap_actors[pn][i] = {}
+	end
+end
+local multitap_chart_sel = {
+	"Hard",
+	"Hard"
+}
 
 
 
@@ -212,6 +237,19 @@ for _,qtzn in ipairs({48, 24, 16, 12, 8, 6, 4, 3, 2, 1}) do
 		qtzn_lookup[i] = qtzn
 	end
 end
+
+local qtzn_tex = {}
+qtzn_tex[ 0] = 0
+qtzn_tex[ 1] = 0
+qtzn_tex[ 2] = 1
+qtzn_tex[ 3] = 2
+qtzn_tex[ 4] = 3
+qtzn_tex[ 6] = 4
+qtzn_tex[ 8] = 5
+qtzn_tex[12] = 6
+qtzn_tex[16] = 7
+qtzn_tex[24] = 7
+qtzn_tex[48] = 7
 
 local calc_qtzn = function(b)
 	-- What quantization is this beat number?
@@ -305,10 +343,10 @@ local calc_multitap_phase = function(mt_desc, b)
 
 		-- We're assured to have an i+1 element here because
 		-- we've already jumped out when b > mt_taps[#mt_taps].
-		ret.rem = #mt_taps - i + 1
+		ret.rem = #mt_taps - i
 		ret.pos = parabolator(mt_taps[i+1] - mt_taps[i], b - mt_taps[i], el)
-		ret.qtc = calc_qtzn(mt_taps[i])
-		ret.qtn = calc_qtzn(mt_taps[i+1])
+		ret.qtc = calc_qtzn(mt_taps[i+1])
+		ret.qtn = calc_qtzn(mt_taps[i+2])
 		ret.vis = true
 	end
 
@@ -346,7 +384,135 @@ local calc_xmod = function(pops, BPS)
 	end
 end
 
+
+local TEST_px_per_beat = SCREEN_HEIGHT * 0.5
+local TEST_px_per_lane = 64
+local TEST_center_x = SCREEN_WIDTH * 0.75
+local TEST_zero_y = 160
+
 local multitap_update_function = function()
+	local status, errmsg = pcall( function() -- begin pcall()
+		local beat = GAMESTATE:GetSongBeat()
+
+		for pn = 1,2 do
+			if multitap_chart_sel[pn] then
+				for mti,mt_desc in ipairs(multitaps[multitap_chart_sel[pn]]) do
+					mt_stats = calc_multitap_phase(mt_desc, beat)
+
+					if mt_stats.vis then
+						multitap_actors[pn][mti]["frame"]:visible(true)
+														 :xy(TEST_px_per_lane * (mt_desc.lane - 2.5) + TEST_center_x,
+														 	 TEST_px_per_beat * mt_stats.pos + TEST_zero_y)
+						multitap_actors[pn][mti]["arrow"]:texturetranslate(0.125 * qtzn_tex[mt_stats.qtc], 0)
+
+						if mt_stats.rem > 1 then
+							multitap_actors[pn][mti]["count"]:visible(true)
+															 :settext(mt_stats.rem)
+						else
+							multitap_actors[pn][mti]["count"]:visible(false)
+						end
+					else
+						multitap_actors[pn][mti]["frame"]:visible(false)
+					end
+				end
+			end
+		end
+	end -- end pcall()
+	)
+	if status then
+		--Trace('### YAY TELP DID NOT MAKE A FUCKY WUCKY')
+	else
+		if not multitap_error then
+			Trace('### OOPS TELP HAS MADE A FUCKO BOINGO (in update function)')
+			Trace('### '..errmsg)
+		end
+	end
+end
+
+
+
+for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
+	local pn = tonumber(string.match(pe, "[0-9]+"));
+	
+	local pops = GAMESTATE:GetPlayerState(pe):GetPlayerOptions("ModsLevel_Song");
+	local noteskinName = pops:NoteSkin();
+	
+	for mti = 1,multitap_max do
+		multitap_parent[#multitap_parent+1] = Def.ActorFrame {
+			Name="MultitapP"..pn.."_"..mti,
+			InitCommand=function(self)
+			end,
+			OnCommand=function(self)
+				local i = mti
+
+				multitap_actors[pn][i]["frame"] = self
+				self:visible(false)
+
+				Trace("=== Added multitap actor frame for P"..pn..", index "..i)
+			end,
+			NOTESKIN:LoadActorForNoteSkin("Down", "Tap Note", noteskinName)..{
+				Name="MultitapArrowP"..pn.."_"..mti,
+				InitCommand=function(self)
+				end,
+				OnCommand=function(self)
+					local i = mti
+
+					multitap_actors[pn][i]["arrow"] = self
+					self:visible(true)
+					Trace("=== Added multitap actor arrow for P"..pn..", index "..i)
+				end,
+			},
+			Def.BitmapText {
+				Name="MultitapTextP"..pn.."_"..mti,
+				Font="_komika axis 36px.ini",
+				Text="",
+				InitCommand=function(self)
+				end,
+				OnCommand=function(self)
+					local i = mti
+
+					multitap_actors[pn][i]["count"] = self
+					self:visible(false)
+						:z(10.0)
+					Trace("=== Added multitap actor count for P"..pn..", index "..i)
+				end,
+			},
+		}
+	end
+end
+
+multitap_parent[#multitap_parent+1] = Def.ActorFrame {
+	Name="Update",
+	InitCommand=function(self)	
+		Trace("### im alive")
+		self:SetUpdateFunction(multitap_update_function)
+	end,
+
+	Def.ActorFrame {
+		InitCommand = function(self)
+			self:sleep(69420)
+		end
+	}
+}
+
+return multitap_parent
+
+
+--[[
+
+--
+-- Backup
+--
+
+
+					-- Only create a tehe if the player is on SH or SX.
+					-- local diff = GAMESTATE:GetCurrentSteps(i-1):GetDifficulty()
+					-- local stype = GAMESTATE:GetCurrentSteps(i-1):GetStepsType()
+					-- if stype == 'StepsType_Dance_Single' and (diff == 'Difficulty_Challenge' or diff == 'Difficulty_Hard') then
+
+
+
+local tehe_update_function = function()
 	local status, errmsg = pcall( function() -- begin pcall()
 		-- TODO: rewrite this ~shyttt~
 
@@ -437,46 +603,4 @@ local multitap_update_function = function()
 end
 
 
-
-for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
-	local pn = tonumber(string.match(pe, "[0-9]+"));
-	
-	local pops = GAMESTATE:GetPlayerState(pe):GetPlayerOptions("ModsLevel_Song");
-	local noteskinName = pops:NoteSkin();
-	
-	for mti = 1,#multi_taps do
-		multitap_parent[#multitap_parent+1] = NOTESKIN:LoadActorForNoteSkin("Down", "Tap Note", noteskinName)..{
-			Name="TeheP"..pn,
-			InitCommand=function(self)
-			end,
-			OnCommand=function(self)
-				local i = tonumber(string.match(self:GetName(), "([0-9]+)"))
-
-				-- Only create a tehe if the player is on SH or SX.
-				local diff = GAMESTATE:GetCurrentSteps(i-1):GetDifficulty()
-				local stype = GAMESTATE:GetCurrentSteps(i-1):GetStepsType()
-				if stype == 'StepsType_Dance_Single' and (diff == 'Difficulty_Challenge' or diff == 'Difficulty_Hard') then
-					multitap_actors[pn][i] = self
-				else
-					self:visible(false)
-				end
-			end,
-		}
-	end
-end
-
-multitap_parent[#multitap_parent+1] = Def.ActorFrame {
-	Name="Update",
-	InitCommand=function(self)	
-		Trace("### im alive")
-		self:SetUpdateFunction(multitap_update_function)
-	end,
-
-	Def.ActorFrame {
-		InitCommand = function(self)
-			self:sleep(69420)
-		end
-	}
-}
-
-return multitap_parent
+]]--
