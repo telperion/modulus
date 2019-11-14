@@ -200,7 +200,7 @@ local multitap_parent = Def.ActorFrame {
 };
 
 local multitap_error = false
-local multitap_previsible = 4
+local multitap_previsible = 8
 local multitap_elasticity = 1
 
 local multitap_max = 0
@@ -378,12 +378,14 @@ local calc_multitap_phase = function(mt_desc, b)
 	--		pos: position in beats before receptors
 	--		qtc: quantization of currently approaching note
 	--		qtn: quantization of next note in the multitap (used to color the number)
+	--		dif: diffuse arrow from 0 (dark) to 1 (full brightness)
 	--		vis: currently visible (true/false)
 	local ret = {
 		rem = 0,
 		pos = 0,
 		qtc = 0,
 		qtn = 0,
+		dif = 0,
 		vis = false
 	}
 
@@ -414,6 +416,7 @@ local calc_multitap_phase = function(mt_desc, b)
 	ret.pos = mt_taps[1] - b
 	ret.qtc = calc_qtzn(mt_taps[1])
 	ret.qtn = calc_qtzn(mt_taps[2])
+	ret.dif = 0
 	ret.vis = (ret.pos < multitap_previsible)
 	local el = 1
 
@@ -431,6 +434,7 @@ local calc_multitap_phase = function(mt_desc, b)
 		ret.pos = parabolator(mt_taps[i+1] - mt_taps[i], b - mt_taps[i], el)
 		ret.qtc = calc_qtzn(mt_taps[i+1])
 		ret.qtn = calc_qtzn(mt_taps[i+2])
+		ret.dif = i / (#mt_taps-1)
 		ret.vis = true
 	end
 
@@ -473,12 +477,22 @@ local TEST_px_per_beat = SCREEN_HEIGHT * 0.5
 local TEST_px_per_lane = 64
 local TEST_center_x = SCREEN_WIDTH * 0.75
 local TEST_zero_y = 160
+local TEST_zoom_count = 1
 
 local multitap_update_function = function()
 	local status, errmsg = pcall( function() -- begin pcall()
 		local beat = GAMESTATE:GetSongBeat()
 
-		for pn = 1,2 do
+		for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
+			local pn = tonumber(string.match(pe, "[0-9]+"))
+
+			local ps 	= GAMESTATE:GetPlayerState('PlayerNumber_P'..pn)
+			local pp 	= SCREENMAN:GetTopScreen():GetChild('PlayerP'..pn)
+			local pops 	= ps:GetPlayerOptions("ModsLevel_Song")
+			local scl_m = 1.0 - 0.5*pops:Mini()		-- Scaling of notes due to application of Mini
+													-- TODO: replace with ArrowEffects/spline acquisition?
+			scl_m = 1.0
+
 			local tex_color_interval = {
 				x = NOTESKIN:GetMetricFForNoteSkin("", "TapNoteNoteColorTextureCoordSpacingX", noteskin_names[pn]),
 				y = NOTESKIN:GetMetricFForNoteSkin("", "TapNoteNoteColorTextureCoordSpacingY", noteskin_names[pn]),
@@ -489,10 +503,23 @@ local multitap_update_function = function()
 					mt_stats = calc_multitap_phase(mt_desc, beat)
 
 					if mt_stats.vis then
+						local lperm = lane_permute(pops, mt_desc.lane+1)		-- Where does this arrow actually land?
+
+						local y_off = ArrowEffects.GetYOffset(ps, lperm, beat + mt_stats.pos) - ArrowEffects.GetYOffset(ps, lperm, beat)
+						local pos_x = ArrowEffects.GetXPos(ps, lperm, y_off) * scl_m + pp:GetX()
+						local pos_y = ArrowEffects.GetYPos(ps, lperm, y_off) * scl_m + pp:GetY() + 8
+						local pos_z = ArrowEffects.GetZPos(ps, lperm, y_off) * scl_m + pp:GetZ()
+
+						Trace("!!! reproach "..pn..", "..mti.." @ "..beat.." + "..mt_stats.pos.." -> "..y_off.." ("..pos_x..", "..pos_y..", "..pos_z..") x "..scl_m)
+
 						multitap_actors[pn][mti]["frame"]:visible(true)
-														 :xy(TEST_px_per_lane * (mt_desc.lane - 2.5) + TEST_center_x,
-														 	 TEST_px_per_beat * mt_stats.pos + TEST_zero_y)
-						multitap_actors[pn][mti]["arrow"]:texturetranslate(
+														 :xy(pos_x, pos_y)
+														 :z(pos_z)
+						--								 :xy(TEST_px_per_lane * (mt_desc.lane - 2.5) + TEST_center_x,
+						--								 	 TEST_px_per_beat * mt_stats.pos + TEST_zero_y)
+						multitap_actors[pn][mti]["arrow"]:baserotationz(lane_rotation[lperm])
+														 :diffuse(lerp_color(mt_stats.dif, color("#666666"), color("#ffffff")))
+														 :texturetranslate(
 							tex_color_interval["x"] * qtzn_tex[mt_stats.qtc],
 							tex_color_interval["y"] * qtzn_tex[mt_stats.qtc]
 							)
@@ -505,7 +532,9 @@ local multitap_update_function = function()
 							end
 							multitap_actors[pn][mti]["count"]:visible(true)
 															 :settext(mt_stats.rem)
+															 :zoom(TEST_zoom_count)
 															 :diffuseramp()
+															 :effectclock("beat")
 															 :effectcolor1(color("#"..color_pair[1]))
 															 :effectcolor2(color("#"..color_pair[2]))
 						else
