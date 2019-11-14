@@ -255,6 +255,86 @@ qtzn_tex[16] = 7
 qtzn_tex[24] = 7
 qtzn_tex[48] = 7
 
+
+-- I don't think it's reasonable within the UPS5 submission timeframe to
+-- dynamically pull/calculate the actual *color* of each quantization for
+-- an arbitrary noteskin, so I'm precalculating some options based on the
+-- Cabby noteskin pack.
+local qtzn_color_tables = {
+	default = {					-- whole texture I'm fucking busy only get few color
+		{"ffffff", "cccccc"},	-- 4ths
+		{"ffffff", "cccccc"},	-- 8ths
+		{"ffffff", "cccccc"},	-- 12ths
+		{"ffffff", "cccccc"},	-- 16ths
+		{"ffffff", "cccccc"},	-- 24ths
+		{"ffffff", "cccccc"},	-- 32nds
+		{"ffffff", "cccccc"},	-- 64ths
+		{"ffffff", "cccccc"},	-- 192nds
+	},
+	shadow = {					-- best colorblindness acuity in the noteskins sharing the ITG palette
+		{"ff6100", "ff0000"},	-- 4ths
+		{"00a2ff", "00f0ff"},	-- 8ths
+		{"fa81d1", "7a15fe"},	-- 12ths
+		{"e2f90f", "09a357"},	-- 16ths
+		{"fa81d1", "7a15fe"},	-- 24ths
+		{"f1db03", "e67b02"},	-- 32nds
+		{"33fc7b", "04b8b6"},	-- 64ths
+		{"33fc7b", "04b8b6"},	-- 192nds
+	},
+	color = {					-- the most like unto the true DDR Note noteskin
+		{"ffc5c5", "ff0000"},	-- 4ths
+		{"0000ff", "c5c5ff"},	-- 8ths
+		{"00ff00", "c5ffc5"},	-- 12ths
+		{"fff617", "646001"},	-- 16ths
+		{"00ff00", "c5ffc5"},	-- 24ths
+		{"00ff00", "c5ffc5"},	-- 32nds
+		{"00ff00", "c5ffc5"},	-- 64ths
+		{"00ff00", "c5ffc5"},	-- 192nds
+	},
+	note = {					-- this is what the DDR Note noteskin should have been
+		{"ff7c7c", "ff2121"},	-- 4ths
+		{"7e86f4", "2432ec"},	-- 8ths
+		{"be77fb", "9018f8"},	-- 12ths
+		{"faff73", "f7ff11"},	-- 16ths
+		{"f383bf", "eb2c93"},	-- 24ths
+		{"ff966d", "ff4d06"},	-- 32nds
+		{"90e3ff", "43d0ff"},	-- 64ths
+		{"85ff7c", "30ff20"},	-- 192nds
+	},
+	horseshoe = {				-- I think it's very unprofessional of the official Trot 100 News account to try and cancel an artist.
+		{"dfa9db", "a96fba"},	-- 4ths
+		{"faba61", "d49234"},	-- 8ths
+		{"98d3f1", "2c78b6"},	-- 12ths
+		{"fe96b9", "b7366e"},	-- 16ths
+		{"b6b3d5", "6947bf"},	-- 24ths
+		{"f0e56e", "eae6bf"},	-- 32nds
+		{"8b7bff", "503497"},	-- 64ths
+		{"ebe6ad", "edb032"},	-- 192nds
+	},
+}
+qtzn_color_tables["cel"]			= qtzn_color_tables["shadow"]
+--qtzn_color_tables["color"]
+qtzn_color_tables["cyber"]			= qtzn_color_tables["shadow"]
+qtzn_color_tables["ddr"]			= qtzn_color_tables["default"]
+qtzn_color_tables["enchantment"]	= qtzn_color_tables["shadow"]
+qtzn_color_tables["equality"]		= qtzn_color_tables["default"]
+qtzn_color_tables["excel"]			= qtzn_color_tables["shadow"]
+qtzn_color_tables["horsegroove"]	= qtzn_color_tables["shadow"]
+qtzn_color_tables["horsenote"]		= qtzn_color_tables["note"]
+--qtzn_color_tables["horseshoe"]
+qtzn_color_tables["metal"]			= qtzn_color_tables["shadow"]
+--qtzn_color_tables["note"]
+qtzn_color_tables["onlyonecouples"]	= qtzn_color_tables["shadow"]
+qtzn_color_tables["rainbow"]		= qtzn_color_tables["shadow"]
+qtzn_color_tables["robot"]			= qtzn_color_tables["default"]
+--qtzn_color_tables["shadow"]
+qtzn_color_tables["solo"]			= qtzn_color_tables["shadow"]
+qtzn_color_tables["toonprints"]		= qtzn_color_tables["horseshoe"]
+qtzn_color_tables["trax"]			= qtzn_color_tables["note"]
+qtzn_color_tables["vel"]			= qtzn_color_tables["shadow"]
+qtzn_color_tables["vintage"]		= qtzn_color_tables["shadow"]
+qtzn_color_tables["vivid"]			= qtzn_color_tables["default"]
+
 local calc_qtzn = function(b)
 	-- What quantization is this beat number?
 	-- e.g., quarter = 1, 16th = 4, 24th = 6, etc.
@@ -403,6 +483,7 @@ local multitap_update_function = function()
 				x = NOTESKIN:GetMetricFForNoteSkin("", "TapNoteNoteColorTextureCoordSpacingX", noteskin_names[pn]),
 				y = NOTESKIN:GetMetricFForNoteSkin("", "TapNoteNoteColorTextureCoordSpacingY", noteskin_names[pn]),
 			}
+			local tex_color_is_rhythm = NOTESKIN:GetMetricBForNoteSkin("", "TapNoteAnimationIsVivid", noteskin_names[pn])
 			if multitap_chart_sel[pn] then
 				for mti,mt_desc in ipairs(multitaps[multitap_chart_sel[pn]]) do
 					mt_stats = calc_multitap_phase(mt_desc, beat)
@@ -417,8 +498,16 @@ local multitap_update_function = function()
 							)
 
 						if mt_stats.rem > 1 then
+							local noteskin_name = string.lower(noteskin_names[pn])
+							local color_pair = qtzn_color_tables["default"][1]
+							if qtzn_color_tables[noteskin_name] and not tex_color_is_rhythm then
+								color_pair = qtzn_color_tables[noteskin_name][mt_stats.qtn]
+							end
 							multitap_actors[pn][mti]["count"]:visible(true)
 															 :settext(mt_stats.rem)
+															 :diffuseramp()
+															 :effectcolor1(color("#"..color_pair[1]))
+															 :effectcolor2(color("#"..color_pair[2]))
 						else
 							multitap_actors[pn][mti]["count"]:visible(false)
 						end
@@ -486,6 +575,7 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 					multitap_actors[pn][i]["count"] = self
 					self:visible(false)
 						:z(10.0)
+						:strokecolor(color("#000000"))
 					Trace("=== Added multitap actor count for P"..pn..", index "..i)
 				end,
 			},
