@@ -202,6 +202,8 @@ local multitap_parent = Def.ActorFrame {
 local multitap_error = false
 local multitap_previsible = 8
 local multitap_elasticity = 1
+local multitap_squishy = 0.3
+local multitap_splines_calc = false
 
 local multitap_max = 0
 for _,mt_list in pairs(multitaps) do
@@ -335,6 +337,10 @@ qtzn_color_tables["vel"]			= qtzn_color_tables["shadow"]
 qtzn_color_tables["vintage"]		= qtzn_color_tables["shadow"]
 qtzn_color_tables["vivid"]			= qtzn_color_tables["default"]
 
+local _BB = function(b)
+	return math.floor(b*48 + 0.5)
+end
+
 local calc_qtzn = function(b)
 	-- What quantization is this beat number?
 	-- e.g., quarter = 1, 16th = 4, 24th = 6, etc.
@@ -368,8 +374,24 @@ local parabolator = function(b, t, elastic)
 	return elastic * t * (b-t) / b
 end
 
+local parabolator_dt = function(b, t, elastic)
+	-- b = beat length of this multitap iteration
+	-- t = time in beats since the start of this multitap iteration
+	-- elastic = scaling of arrowpath position (1 = perfect bounce from approach speed, 0 = dead stop)
+	-- returns distance back up the arrow path to travel
+	--
+	-- f(t) = v/b * t * (b - t), where v = approach speed
+	-- we can get around needing to know the pixelar speed of the arrow by calculating distance
+	-- in terms of beats traveled @ whatever the reading speed is.
+	-- therefore the approach is always 1 beat/beat >:)
+	if not elastic then
+		elastic = 1
+	end
+	return elastic * (b - 2*t) / b
+end
+
 local calc_multitap_phase = function(mt_desc, b)
-	-- mt_table = multitap descriptor with the follwoing elements:
+	-- mt_desc = multitap descriptor with the following elements:
 	--		lane: which lane the tap is in (unimportant here)
 	--		taps: tap beat times included in this multitap
 	-- b = current beat
@@ -383,6 +405,7 @@ local calc_multitap_phase = function(mt_desc, b)
 	local ret = {
 		rem = 0,
 		pos = 0,
+		sqh = 0,
 		qtc = 0,
 		qtn = 0,
 		dif = 0,
@@ -414,6 +437,7 @@ local calc_multitap_phase = function(mt_desc, b)
 	-- Basic case for when we're earlier than the first tap.
 	ret.rem = #mt_taps
 	ret.pos = mt_taps[1] - b
+	ret.sqh = 0
 	ret.qtc = calc_qtzn(mt_taps[1])
 	ret.qtn = calc_qtzn(mt_taps[2])
 	ret.dif = 0
@@ -432,6 +456,7 @@ local calc_multitap_phase = function(mt_desc, b)
 		-- we've already jumped out when b > mt_taps[#mt_taps].
 		ret.rem = #mt_taps - i
 		ret.pos = parabolator(mt_taps[i+1] - mt_taps[i], b - mt_taps[i], el)
+		ret.sqh = multitap_squishy*(math.abs(parabolator_dt(mt_taps[i+1] - mt_taps[i], b - mt_taps[i], el)) - 0.5)
 		ret.qtc = calc_qtzn(mt_taps[i+1])
 		ret.qtn = calc_qtzn(mt_taps[i+2])
 		ret.dif = i / (#mt_taps-1)
@@ -439,6 +464,54 @@ local calc_multitap_phase = function(mt_desc, b)
 	end
 
 	return ret
+end
+
+
+local calc_zoom_splines = function(mt_table, pp)
+	-- Calculate length of spline needed.
+	local splSize = {}
+	for mti,mt_desc in ipairs(mt_table) do
+		if not splSize[mt_desc.lane + 1] then
+			splSize[mt_desc.lane + 1] = 0
+		end
+
+		if #mt_desc.taps > 0 then
+			if mt_desc.taps[#mt_desc.taps] > splSize[mt_desc.lane + 1] then
+				splSize[mt_desc.lane + 1] = mt_desc.taps[#mt_desc.taps]
+			end
+		end
+	end
+
+	-- Convert to 192nds count.
+	for i,v in ipairs(splSize) do
+		splSize[i] = _BB(v) + 2
+	end
+
+	-- Apply the spline points.
+	local nf = pp:GetChild('NoteField')
+	local ncr_table = nf:GetColumnActors()
+
+	for lane,ncr in ipairs(ncr_table) do
+		splHandle = ncr:GetZoomHandler()
+		splHandle:SetSplineMode('NoteColumnSplineMode_Offset')
+				 :SetSubtractSongBeat(false)
+				 :SetReceptorT(0.0)
+				 :SetBeatsPerT(1/48)
+		local splObject = splHandle:GetSpline()
+		splObject:SetSize(splSize[lane])
+		for spli = 1,splSize[lane] do
+			splObject:SetPoint(spli, {0, 0, 0})
+		end
+		for mti,mt_desc in ipairs(mt_table) do
+			if (mt_desc.lane + 1 == lane) and (#mt_desc.taps > 0) then
+				for spli=_BB(mt_desc.taps[1]),_BB(mt_desc.taps[#mt_desc.taps]) do
+					splObject:SetPoint(spli+1, {-1, -1, -1})
+					--Trace("::: "..lane..".("..spli.." of "..splSize[lane]..") or ("..(spli/48)..")")
+				end
+			end
+		end
+		splObject:Solve()
+	end
 end
 
 local lane_permute = function(pops, l)
@@ -478,6 +551,7 @@ local TEST_px_per_lane = 64
 local TEST_center_x = SCREEN_WIDTH * 0.75
 local TEST_zero_y = 160
 local TEST_zoom_count = 1
+local TEST_squishy = 0.2
 
 local multitap_update_function = function()
 	local status, errmsg = pcall( function() -- begin pcall()
@@ -493,6 +567,11 @@ local multitap_update_function = function()
 													-- TODO: replace with ArrowEffects/spline acquisition?
 			scl_m = 1.0
 
+			if not multitap_splines_calc then
+				calc_zoom_splines(multitaps[multitap_chart_sel[pn]], pp)
+				multitap_splines_calc = true
+			end
+
 			local tex_color_interval = {
 				x = NOTESKIN:GetMetricFForNoteSkin("", "TapNoteNoteColorTextureCoordSpacingX", noteskin_names[pn]),
 				y = NOTESKIN:GetMetricFForNoteSkin("", "TapNoteNoteColorTextureCoordSpacingY", noteskin_names[pn]),
@@ -506,15 +585,17 @@ local multitap_update_function = function()
 						local lperm = lane_permute(pops, mt_desc.lane+1)		-- Where does this arrow actually land?
 
 						local y_off = ArrowEffects.GetYOffset(ps, lperm, beat + mt_stats.pos) - ArrowEffects.GetYOffset(ps, lperm, beat)
-						local pos_x = ArrowEffects.GetXPos(ps, lperm, y_off) * scl_m + pp:GetX()
-						local pos_y = ArrowEffects.GetYPos(ps, lperm, y_off) * scl_m + pp:GetY() + 8
-						local pos_z = ArrowEffects.GetZPos(ps, lperm, y_off) * scl_m + pp:GetZ()
+						local pos_x = ArrowEffects.GetXPos(ps, lperm, y_off) * scl_m + pp:GetX() + pp:GetChild("NoteField"):GetX()
+						local pos_y = ArrowEffects.GetYPos(ps, lperm, y_off) * scl_m + pp:GetY() + pp:GetChild("NoteField"):GetY()
+						local pos_z = ArrowEffects.GetZPos(ps, lperm, y_off) * scl_m + pp:GetZ() + pp:GetChild("NoteField"):GetZ()
 
-						Trace("!!! reproach "..pn..", "..mti.." @ "..beat.." + "..mt_stats.pos.." -> "..y_off.." ("..pos_x..", "..pos_y..", "..pos_z..") x "..scl_m)
+						--Trace("??? "..pp:GetChild("NoteField"):GetY())
+						--Trace("!!! reproach "..pn..", "..mti.." @ "..beat.." + "..mt_stats.pos.." -> "..y_off.." ("..pos_x..", "..pos_y..", "..pos_z..") x "..scl_m)
 
 						multitap_actors[pn][mti]["frame"]:visible(true)
 														 :xy(pos_x, pos_y)
 														 :z(pos_z)
+														 :zoomy(1 + mt_stats.sqh)
 						--								 :xy(TEST_px_per_lane * (mt_desc.lane - 2.5) + TEST_center_x,
 						--								 	 TEST_px_per_beat * mt_stats.pos + TEST_zero_y)
 						multitap_actors[pn][mti]["arrow"]:baserotationz(lane_rotation[lperm])
@@ -562,7 +643,7 @@ end
 
 for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 	local pn = tonumber(string.match(pe, "[0-9]+"))
-	
+
 	local pops = GAMESTATE:GetPlayerState(pe):GetPlayerOptions("ModsLevel_Song")
 	local noteskin_name = pops:NoteSkin()
 	noteskin_names[pn] = noteskin_name
@@ -578,7 +659,7 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 				multitap_actors[pn][i]["frame"] = self
 				self:visible(false)
 
-				Trace("=== Added multitap actor frame for P"..pn..", index "..i)
+				--Trace("=== Added multitap actor frame for P"..pn..", index "..i)
 			end,
 			NOTESKIN:LoadActorForNoteSkin("Down", "Tap Note", noteskin_name)..{
 				Name="MultitapArrowP"..pn.."_"..mti,
@@ -589,7 +670,7 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 
 					multitap_actors[pn][i]["arrow"] = self
 					self:visible(true)
-					Trace("=== Added multitap actor arrow for P"..pn..", index "..i)
+					--Trace("=== Added multitap actor arrow for P"..pn..", index "..i)
 				end,
 			},
 			Def.BitmapText {
@@ -605,7 +686,7 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 					self:visible(false)
 						:z(10.0)
 						:strokecolor(color("#000000"))
-					Trace("=== Added multitap actor count for P"..pn..", index "..i)
+					--Trace("=== Added multitap actor count for P"..pn..", index "..i)
 				end,
 			},
 		}
