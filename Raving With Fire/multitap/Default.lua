@@ -113,59 +113,79 @@ function Reflection_SM5(t, d, fake_name)
 	end
 end
 
-
 function TryCommandOnLeaves(act, command_name, command_params, verbose, d, fake_name)
 	if not act then
-		print("::: ??? null ???")
-		return
-	end
+		print("::: ??? null ???")												-- Am I Pregant?
+		return																	-- Am I pragnent?
+	end	
 
-	d = d and d or 0
-	fake_name = fake_name and fake_name or "<N/A>"
-
-	local indent = string.rep("\t", d)
-
-	local n_format = (act["GetName"] and act:GetName() or "")
-		  n_format = (n_format ~= "") and n_format or fake_name
-
-	local n_kids = 0
-	local s, r = pcall(function() return act:GetNumChildren() end); if s then n_kids = r end
-
-	local n_items = 0
+	d = d and d or 0															-- Am I pargant?
+	fake_name = fake_name and fake_name or "<N/A>"								-- Am i gregnant?
+	
+	local indent = string.rep("\t", d)											-- Am i pegnate?? Help!?
+	
+	local n_format = (act["GetName"] and act:GetName() or "")					-- Is there a possibly that i'm pegrent?
+		  n_format = (n_format ~= "") and n_format or fake_name					-- Am I pregegnant or am I okay?
+	
+	local n_kids = 0															-- Could I be pregonate?
+	local s, r = pcall(function() return act:GetNumChildren() end);				-- How do I know if I'M prengan?
+	if s then n_kids = r end													-- Can i be prregnant????
+	
+	local n_items = 0															-- Can u get pregante...?
 	for k,m in pairs(act) do
-		n_items = n_items + 1
+		n_items = n_items + 1													-- Can u blink while u are pergert?
 	end
 
-	if verbose then Trace(":#: "..indent..n_format..": "..n_kids.." children, "..n_items.." standard members") end
+	if verbose then 
+		Trace(	":#: "..indent..n_format..": "..								-- Can u down a 20 beat waterspline pegnat?
+				n_kids.." children, "..											-- How can i get my notefield pragnet?
+				n_items.." standard members"									-- What happen when get pergenat?
+		)
+	end
 
+	-- Actual kids, with actual actor properties.
 	if n_kids > 0 then
-		local kids = act:GetChildren()
-		local i = 0
+		local kids = act:GetChildren()											-- How can a ninefoot chart get prangnet?
+		local i = 0																-- Will my get pragnan?
 		for k,m in pairs(kids) do
-			i = i + 1
-			TryCommandOnLeaves(m, command_name, command_params, verbose, d+1, n_format.."->"..i)
+			i = i + 1															-- What is the best time to step to be come pregnart
+			TryCommandOnLeaves(m, command_name, command_params,					-- Does any one know how many tweens get bregant a year????
+				verbose, d+1, n_format.."->"..i)								-- Are these systoms of being pregarnt?
 		end
 	end
 
+	-- Imagine giving birth to a bunch of tables?? that's lua I guess
 	for k,m in pairs(act) do
 		if type(m) == "table" then
-			local n_m = 0; for _ in pairs(m) do n_m = n_m + 1 end
-			if verbose then Trace("::: "..indent.."\t"..n_format.."."..k..": table with "..n_m.." elements") end
-			TryCommandOnLeaves(m, command_name, command_params, verbose, d+1, n_format.."."..k)
+			local n_m = 0; for _ in pairs(m) do n_m = n_m + 1 end				-- Notefield aint had effectperiod since she got pregat?
+			if verbose then 
+				Trace(	"::: "..indent.."\t"..n_format.."."..k..				-- Is it possible having step to a 8 miss fregnant?
+						": table with "..n_m.." elements"						-- If an actors has starch masks on her texture does that mean she has been pargnet before.?
+				)
+			end
+			TryCommandOnLeaves(m, command_name, command_params,					-- My circle is nomal,but yet i still dont get peegnant.wat can i use.?
+				verbose, d+1, n_format.."."..k)									-- Has anybody got pergnut by just preset while using BothAtOnce control?
 		else
-			if verbose then Trace("::: "..indent.."\t"..n_format.."."..k..": "..m..", "..type(m)) end
+			if verbose then
+				Trace(	"::: "..indent.."\t"..n_format.."."..k..				-- Did most you actors FEEL pgrenant before find out?
+						": "..m..", of type "..type(m))							-- I am pragananat last 5 wayoff so can i start step?
+			end
 		end
 	end
 
+	-- Dare ka ga fucking hear me dekimasu ka?
 	if act[command_name.."Command"] then
-		--if verbose then
-			Trace("#:# Attempting "..command_name.."Command on "..n_format)
-		--end
-
+		if verbose then
+			Trace("#:# Attempting "..command_name.."Command on "..n_format)		-- Dangerops prangent step? will it hurt arrow top of his head?
+		end
 		if command_params then
-			pcall(function() act:playcommand(command_name, unpack(command_params)) end)
+			pcall(function()													-- Me and my notefield are tying to get prefnat and j havent took my BothAtOnce control in 12 plays?
+				act:playcommand(command_name, unpack(command_params))			-- 38 + 2 wayoffs pregananant?
+			end)																-- I think my down is pregernet???
 		else
-			pcall(function() act:playcommand(command_name) end)
+			pcall(function()													-- How long can u go being prognant to get an FailImmediately?
+				act:playcommand(command_name)									-- Can i get prengt if he had a condor on?
+			end)																-- I think I'm pretnet with my 14th table?
 		end
 	end
 end
