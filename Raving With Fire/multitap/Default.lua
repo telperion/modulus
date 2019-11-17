@@ -175,9 +175,9 @@ function TryCommandOnLeaves(act, command_name, command_params, verbose, d, fake_
 
 	-- Dare ka ga fucking hear me dekimasu ka?
 	if act[command_name.."Command"] then
-		if verbose then
+		--if verbose then
 			Trace("#:# Attempting "..command_name.."Command on "..n_format)		-- Dangerops prangent step? will it hurt arrow top of his head?
-		end
+		--end
 		if command_params then
 			pcall(function()													-- Me and my notefield are tying to get prefnat and j havent took my BothAtOnce control in 12 plays?
 				act:playcommand(command_name, unpack(command_params))			-- 38 + 2 wayoffs pregananant?
@@ -336,7 +336,7 @@ qtzn_color_tables["horsenote"]		= qtzn_color_tables["note"]
 qtzn_color_tables["metal"]			= qtzn_color_tables["shadow"]
 --qtzn_color_tables["note"]
 qtzn_color_tables["onlyonecouples"]	= qtzn_color_tables["shadow"]
-qtzn_color_tables["rainbow"]		= qtzn_color_tables["shadow"]
+qtzn_color_tables["rainbow"]		= qtzn_color_tables["default"]
 qtzn_color_tables["robot"]			= qtzn_color_tables["default"]
 --qtzn_color_tables["shadow"]
 qtzn_color_tables["solo"]			= qtzn_color_tables["shadow"]
@@ -475,8 +475,20 @@ local calc_multitap_phase = function(mt_desc, b)
 	return ret
 end
 
+for i=1,2 do
+	local pn = i
+	_G["multitap_note_callback_P"..i] = function(lane, tns, is_bright)
+		if multitap_explosions[pn][lane] then
+			Trace("??? do explosion pls")
+			multitap_explosions[pn][lane]:propagatecommand("Judgment")
+			multitap_explosions[pn][lane]:propagatecommand("Bright")
+			multitap_explosions[pn][lane]:propagatecommand(string.sub(tns, 14))
+			--TryCommandOnLeaves(multitap_explosions[pn][lane], string.sub(tns, 14), nil, true)
+		end
+	end
+end
 
-local calc_zoom_splines = function(mt_table, pp)
+local calc_zoom_splines = function(mt_table, pn)
 	-- Calculate length of spline needed.
 	local splSize = {}
 	for mti,mt_desc in ipairs(mt_table) do
@@ -497,8 +509,12 @@ local calc_zoom_splines = function(mt_table, pp)
 	end
 
 	-- Apply the spline points.
+	local pp = SCREENMAN:GetTopScreen():GetChild('PlayerP'..pn)
 	local nf = pp:GetChild('NoteField')
 	local ncr_table = nf:GetColumnActors()
+
+	-- Apply the false explosion callback.
+	nf:SetDidTapNoteCallback(_G["multitap_note_callback_P"..pn])
 
 	for lane,ncr in ipairs(ncr_table) do
 		splHandle = ncr:GetZoomHandler()
@@ -555,6 +571,7 @@ local calc_xmod = function(pops, BPS)
 end
 
 
+
 local TEST_px_per_beat = SCREEN_HEIGHT * 0.5
 local TEST_px_per_lane = 64
 local TEST_center_x = SCREEN_WIDTH * 0.75
@@ -582,7 +599,7 @@ local multitap_update_function = function()
 				full_chart_name = GAMESTATE:GetCurrentSteps(pn-1):GetDifficulty()
 				multitap_chart_sel[pn] = string.sub(full_chart_name, 12)
 
-				calc_zoom_splines(multitaps[multitap_chart_sel[pn]], pp)
+				calc_zoom_splines(multitaps[multitap_chart_sel[pn]], pn)
 				multitap_splines_calc[pn] = true
 			end
 
@@ -593,18 +610,6 @@ local multitap_update_function = function()
 			local tex_color_is_rhythm = NOTESKIN:GetMetricBForNoteSkin("", "TapNoteAnimationIsVivid", noteskin_names[pn])
 			if multitap_chart_sel[pn] then
 				local show_false_explosion = {false, false, false, false}
-
-				if math.floor(TEST_last_beat) < math.floor(beat) then
-					show_false_explosion[2] = true
-					if multitap_explosions[pn][pn+1]["playcommandonleaves"] then
-					--	multitap_explosions[pn][pn+1]:playcommandonleaves("W2")
-					else
-					--	multitap_explosions[pn][pn+1]:playcommand("W2")
-					end
-
-					TryCommandOnLeaves(multitap_explosions[pn][pn+1], "W2")
-					Trace("??? do explosion pls")
-				end
 
 				for mti,mt_desc in ipairs(multitaps[multitap_chart_sel[pn]]) do
 					mt_stats = calc_multitap_phase(mt_desc, beat)
@@ -634,8 +639,8 @@ local multitap_update_function = function()
 							tex_color_interval["y"] * qtzn_tex[mt_stats.qtc]
 							)
 
+						-- Be prepared to fire a fake explosion if any multitap in this lane is active.
 						show_false_explosion[lperm] = true
-						--							 :baserotationz(lane_rotation[lperm])
 
 						if mt_stats.rem > 1 then
 							local noteskin_name = string.lower(noteskin_names[pn])
@@ -669,6 +674,7 @@ local multitap_update_function = function()
 												  :z(ex_pos_z)
 												  :zoom(scl_m)
 												  :baserotationz(lane_rotation[lperm])
+												  :visible(show_false_explosion[lperm])
 				end
 			end
 		end
@@ -706,6 +712,8 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 				self:visible(true)
 				--Trace("=== Added multitap actor explosion for P"..pn..", lane "..lane)
 			end,
+			--W1Command=NOTESKIN:GetMetricAForNoteSkin("GhostArrowBright", "W1Command", noteskin_name),
+			--W1Command=cmd(diffuse,1.0,1.0,1.0,1;zoom,1;linear,0.06;zoom,1.1;linear,0.06;diffusealpha,0),
 		}
 	end
 	
