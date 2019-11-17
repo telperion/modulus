@@ -4,186 +4,171 @@
 --		
 --		Author: 	Telperion
 --		Date: 		2019-11-03
---		Version:	0.1
+--		Version:	0.9
 --
 -------------------------------------------------------------------------------
 
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 --
--- Replace the contents of this table by using the Python chart utilities.
+-- Generate the below file by using Telperion's Python chart utilities.
 -- MultitapsWorkflow(r'C:\path\to\simfile.sm')
 --
--- TODO: move this to its own (ideally autogenerateable) file!
+-- Version matching performed here.
 --
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
-local multitaps = {
-	Hard = {
-		{lane = 1, taps = {
-			  12.500,
-			  13.500,
-			  14.500,
-		}},
-		{lane = 1, taps = {
-			  16.500,
-			  17.500,
-			  18.500,
-		}},
-		{lane = 0, taps = {
-			  20.000,
-			  21.000,
-			  22.000,
-			  23.000,
-		}},
-		{lane = 2, taps = {
-			  20.500,
-			  21.500,
-			  22.500,
-		}},
-		{lane = 1, taps = {
-			  24.500,
-			  25.500,
-			  26.500,
-		}},
-		{lane = 2, taps = {
-			  25.000,
-			  27.000,
-		}},
-		{lane = 3, taps = {
-			  24.000,
-			  26.000,
-		}},
-		{lane = 0, taps = {
-			  28.000,
-			  28.750,
-			  29.500,
-		}},
-		{lane = 3, taps = {
-			  30.000,
-			  30.750,
-			  31.500,
-		}},
-		{lane = 0, taps = {
-			  32.750,
-			  33.500,
-		}},
-		{lane = 2, taps = {
-			  32.500,
-			  33.250,
-		}},
-		{lane = 2, taps = {
-			  34.500,
-			  35.250,
-		}},
-		{lane = 3, taps = {
-			  34.750,
-			  35.500,
-		}},
-		{lane = 0, taps = {
-			  36.000,
-			  38.000,
-		}},
-		{lane = 1, taps = {
-			  37.000,
-			  38.000,
-		}},
-		{lane = 3, taps = {
-			  39.000,
-			  40.500,
-		}},
-		{lane = 0, taps = {
-			  39.500,
-			  42.000,
-		}},
-		{lane = 2, taps = {
-			  41.000,
-			  42.000,
-		}},
-		{lane = 0, taps = {
-			  43.000,
-			  46.000,
-		}},
-		{lane = 2, taps = {
-			  44.500,
-			  46.000,
-		}},
-		{lane = 3, taps = {
-			  43.500,
-			  45.000,
-		}},
-		{lane = 0, taps = {
-			  48.250,
-			  48.750,
-		}},
-		{lane = 1, taps = {
-			  47.250,
-			  47.750,
-			  50.000,
-		}},
-		{lane = 2, taps = {
-			  49.250,
-			  49.750,
-		}},
-		{lane = 3, taps = {
-			  47.000,
-			  47.500,
-			  48.000,
-			  48.500,
-			  49.000,
-			  49.500,
-		}},
-		{lane = 0, taps = {
-			  51.000,
-			  51.500,
-			  52.000,
-		}},
-		{lane = 1, taps = {
-			  54.000,
-			  58.500,
-		}},
-		{lane = 2, taps = {
-			  56.000,
-			  59.500,
-		}},
-		{lane = 3, taps = {
-			  53.000,
-			  55.000,
-			  57.000,
-		}},
-		{lane = 0, taps = {
-			  58.000,
-			  59.000,
-			  60.000,
-		}},
-		{lane = 1, taps = {
-			  62.500,
-			  64.000,
-		}},
-		{lane = 2, taps = {
-			  62.000,
-			  63.500,
-		}},
-		{lane = 0, taps = {
-			  65.000,
-			  65.500,
-		}},
-		{lane = 1, taps = {
-			  65.250,
-			  65.750,
-		}},
-		{lane = 2, taps = {
-			  66.000,
-			  67.500,
-		}},
-		{lane = 1, taps = {
-			  66.750,
-			  67.250,
-		}},
-		{lane = 3, taps = {
-			  66.500,
-			  67.000,
-		}},
-	},
-}
+multitaps = {}
+multitap_version = {0, 9}
+
+local whereTheFlipAmI = GAMESTATE:GetCurrentSong():GetSongDir()
+dofile(whereTheFlipAmI .. "multitap/multitap_data.lua")
+
+local version_mismatch = function(mv_data, mv_parser)
+	SCREENMAN:SystemMessage("### Multitap version mismatch: data @ "..mv_data[1].."."..mv_data[2]..", parser @ "..mv_parser[1].."."..mv_parser[2])
+end
+local version_record = function(mv_data, mv_parser)
+	Trace("### Multitap versions: data @ "..mv_data[1].."."..mv_data[2]..", parser @ "..mv_parser[1].."."..mv_parser[2])
+end
+
+if multitaps["_version"] then
+	version_record(multitaps["_version"], multitap_version)
+	if multitaps["_version"][1] > multitap_version[1] then
+		version_mismatch(multitaps["_version"], multitap_version)
+		return Def.ActorFrame{}
+	end
+	if multitaps["_version"][2] > multitap_version[2] then
+		version_mismatch(multitaps["_version"], multitap_version)
+		return Def.ActorFrame{}
+	end
+else
+	SCREENMAN:SystemMessage("### Found unversioned multitap data")
+end
+
+--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
+--
+-- Some helper functions I haven't isolated yet
+--
+--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
+
+function Reflection_General(t, d)
+	d = d and d or 0	
+
+	indent = string.rep("\t", d)
+	for n,e in pairs(t) do
+		n_format = string.format("%s", n)
+		if type(e) == "function" then
+			f_info = debug.getinfo(e)
+			f_info = string.gsub(f_info, "\n", "\n\t"..indent)
+			print("::: "..indent..n_format..": function\n"..f_info)
+		elseif type(e) == "table" then
+			n_m = 0; for _ in pairs(e) do n_m = n_m + 1 end
+			print("::: "..indent..n_format..": table with "..n_m.." elements")
+			Reflection_General(e, d+1)
+		else
+			print("::: "..indent..n_format..": "..type(e))
+		end
+	end
+end
+
+function Reflection_SM5(t, d, fake_name)
+	if not t then
+		print("::: ??? null ???")
+		return
+	end
+
+	d = d and d or 0
+	fake_name = fake_name and fake_name or "<N/A>"
+
+	local indent = string.rep("\t", d)
+
+	local n_format = (t["GetName"] and t:GetName() or "")
+		  n_format = (n_format ~= "") and n_format or fake_name
+
+	local n_kids = 0
+	local s, r = pcall(function() return t:GetNumChildren() end); if s then n_kids = r end
+
+	local n_items = 0
+	for k,m in pairs(t) do
+		n_items = n_items + 1
+	end
+
+	print(":#: "..indent..n_format..": "..n_kids.." children, "..n_items.." standard members")
+
+	if n_kids > 0 then
+		local kids = t:GetChildren()
+		local i = 0
+		for k,act in pairs(kids) do
+			i = i + 1
+			Reflection_SM5(act, d+1, n_format.."->"..i)
+		end
+	end
+
+	for k,m in pairs(t) do
+		if type(m) == "table" then
+			local n_m = 0; for _ in pairs(m) do n_m = n_m + 1 end
+			print("::: "..indent.."\t"..n_format.."."..k..": table with "..n_m.." elements")
+			Reflection_SM5(m, d+1, n_format.."."..k)
+		else
+			print("::: "..indent.."\t"..n_format.."."..k..": "..m..", "..type(m))
+		end
+	end
+end
+
+
+function TryCommandOnLeaves(act, command_name, command_params, verbose, d, fake_name)
+	if not act then
+		print("::: ??? null ???")
+		return
+	end
+
+	d = d and d or 0
+	fake_name = fake_name and fake_name or "<N/A>"
+
+	local indent = string.rep("\t", d)
+
+	local n_format = (act["GetName"] and act:GetName() or "")
+		  n_format = (n_format ~= "") and n_format or fake_name
+
+	local n_kids = 0
+	local s, r = pcall(function() return act:GetNumChildren() end); if s then n_kids = r end
+
+	local n_items = 0
+	for k,m in pairs(act) do
+		n_items = n_items + 1
+	end
+
+	if verbose then Trace(":#: "..indent..n_format..": "..n_kids.." children, "..n_items.." standard members") end
+
+	if n_kids > 0 then
+		local kids = act:GetChildren()
+		local i = 0
+		for k,m in pairs(kids) do
+			i = i + 1
+			TryCommandOnLeaves(m, command_name, command_params, verbose, d+1, n_format.."->"..i)
+		end
+	end
+
+	for k,m in pairs(act) do
+		if type(m) == "table" then
+			local n_m = 0; for _ in pairs(m) do n_m = n_m + 1 end
+			if verbose then Trace("::: "..indent.."\t"..n_format.."."..k..": table with "..n_m.." elements") end
+			TryCommandOnLeaves(m, command_name, command_params, verbose, d+1, n_format.."."..k)
+		else
+			if verbose then Trace("::: "..indent.."\t"..n_format.."."..k..": "..m..", "..type(m)) end
+		end
+	end
+
+	if act[command_name.."Command"] then
+		--if verbose then
+			Trace("#:# Attempting "..command_name.."Command on "..n_format)
+		--end
+
+		if command_params then
+			pcall(function() act:playcommand(command_name, unpack(command_params)) end)
+		else
+			pcall(function() act:playcommand(command_name) end)
+		end
+	end
+end
 
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 --
@@ -203,7 +188,7 @@ local multitap_error = false
 local multitap_previsible = 8
 local multitap_elasticity = 1
 local multitap_squishy = 0.3
-local multitap_splines_calc = false
+local multitap_splines_calc = {false, false}
 
 local multitap_max = 0
 for _,mt_list in pairs(multitaps) do
@@ -226,11 +211,15 @@ for pn = 1,2 do
 		multitap_actors[pn][i] = {}
 	end
 end
+local multitap_explosions = {
+	{},
+	{}
+}
+
 local multitap_chart_sel = {
 	"Hard",
 	"Hard"
 }
-
 local noteskin_names = {
 	"shadow",
 	"shadow"
@@ -471,13 +460,13 @@ local calc_zoom_splines = function(mt_table, pp)
 	-- Calculate length of spline needed.
 	local splSize = {}
 	for mti,mt_desc in ipairs(mt_table) do
-		if not splSize[mt_desc.lane + 1] then
-			splSize[mt_desc.lane + 1] = 0
+		if not splSize[mt_desc.lane] then
+			splSize[mt_desc.lane] = 0
 		end
 
 		if #mt_desc.taps > 0 then
-			if mt_desc.taps[#mt_desc.taps] > splSize[mt_desc.lane + 1] then
-				splSize[mt_desc.lane + 1] = mt_desc.taps[#mt_desc.taps]
+			if mt_desc.taps[#mt_desc.taps] > splSize[mt_desc.lane] then
+				splSize[mt_desc.lane] = mt_desc.taps[#mt_desc.taps]
 			end
 		end
 	end
@@ -503,7 +492,7 @@ local calc_zoom_splines = function(mt_table, pp)
 			splObject:SetPoint(spli, {0, 0, 0})
 		end
 		for mti,mt_desc in ipairs(mt_table) do
-			if (mt_desc.lane + 1 == lane) and (#mt_desc.taps > 0) then
+			if (mt_desc.lane == lane) and (#mt_desc.taps > 0) then
 				for spli=_BB(mt_desc.taps[1]),_BB(mt_desc.taps[#mt_desc.taps]) do
 					splObject:SetPoint(spli+1, {-1, -1, -1})
 					--Trace("::: "..lane..".("..spli.." of "..splSize[lane]..") or ("..(spli/48)..")")
@@ -553,8 +542,11 @@ local TEST_zero_y = 160
 local TEST_zoom_count = 1
 local TEST_squishy = 0.2
 
+local TEST_last_beat = 4
+
 local multitap_update_function = function()
-	local status, errmsg = pcall( function() -- begin pcall()
+	local status = 1
+--	local status, errmsg = pcall( function() -- begin pcall()
 		local beat = GAMESTATE:GetSongBeat()
 
 		for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
@@ -565,11 +557,13 @@ local multitap_update_function = function()
 			local pops 	= ps:GetPlayerOptions("ModsLevel_Song")
 			local scl_m = 1.0 - 0.5*pops:Mini()		-- Scaling of notes due to application of Mini
 													-- TODO: replace with ArrowEffects/spline acquisition?
-			scl_m = 1.0
 
-			if not multitap_splines_calc then
+			if not multitap_splines_calc[pn] then
+				full_chart_name = GAMESTATE:GetCurrentSteps(pn-1):GetDifficulty()
+				multitap_chart_sel[pn] = string.sub(full_chart_name, 12)
+
 				calc_zoom_splines(multitaps[multitap_chart_sel[pn]], pp)
-				multitap_splines_calc = true
+				multitap_splines_calc[pn] = true
 			end
 
 			local tex_color_interval = {
@@ -578,12 +572,26 @@ local multitap_update_function = function()
 			}
 			local tex_color_is_rhythm = NOTESKIN:GetMetricBForNoteSkin("", "TapNoteAnimationIsVivid", noteskin_names[pn])
 			if multitap_chart_sel[pn] then
+				local show_false_explosion = {false, false, false, false}
+
+				if math.floor(TEST_last_beat) < math.floor(beat) then
+					show_false_explosion[2] = true
+					if multitap_explosions[pn][pn+1]["playcommandonleaves"] then
+					--	multitap_explosions[pn][pn+1]:playcommandonleaves("W2")
+					else
+					--	multitap_explosions[pn][pn+1]:playcommand("W2")
+					end
+
+					TryCommandOnLeaves(multitap_explosions[pn][pn+1], "W2")
+					Trace("??? do explosion pls")
+				end
+
 				for mti,mt_desc in ipairs(multitaps[multitap_chart_sel[pn]]) do
 					mt_stats = calc_multitap_phase(mt_desc, beat)
+					
+					local lperm = lane_permute(pops, mt_desc.lane)		-- Where does this arrow actually land?
 
 					if mt_stats.vis then
-						local lperm = lane_permute(pops, mt_desc.lane+1)		-- Where does this arrow actually land?
-
 						local y_off = ArrowEffects.GetYOffset(ps, lperm, beat + mt_stats.pos) - ArrowEffects.GetYOffset(ps, lperm, beat)
 						local pos_x = ArrowEffects.GetXPos(ps, lperm, y_off) * scl_m + pp:GetX() + pp:GetChild("NoteField"):GetX()
 						local pos_y = ArrowEffects.GetYPos(ps, lperm, y_off) * scl_m + pp:GetY() + pp:GetChild("NoteField"):GetY()
@@ -595,7 +603,8 @@ local multitap_update_function = function()
 						multitap_actors[pn][mti]["frame"]:visible(true)
 														 :xy(pos_x, pos_y)
 														 :z(pos_z)
-														 :zoomy(1 + mt_stats.sqh)
+														 :zoom(scl_m)
+														 :zoomy(scl_m * (1 + mt_stats.sqh))
 						--								 :xy(TEST_px_per_lane * (mt_desc.lane - 2.5) + TEST_center_x,
 						--								 	 TEST_px_per_beat * mt_stats.pos + TEST_zero_y)
 						multitap_actors[pn][mti]["arrow"]:baserotationz(lane_rotation[lperm])
@@ -605,11 +614,14 @@ local multitap_update_function = function()
 							tex_color_interval["y"] * qtzn_tex[mt_stats.qtc]
 							)
 
+						show_false_explosion[lperm] = true
+						--							 :baserotationz(lane_rotation[lperm])
+
 						if mt_stats.rem > 1 then
 							local noteskin_name = string.lower(noteskin_names[pn])
 							local color_pair = qtzn_color_tables["default"][1]
 							if qtzn_color_tables[noteskin_name] and not tex_color_is_rhythm then
-								color_pair = qtzn_color_tables[noteskin_name][mt_stats.qtn]
+								color_pair = qtzn_color_tables[noteskin_name][qtzn_tex[mt_stats.qtn]+1]
 							end
 							multitap_actors[pn][mti]["count"]:visible(true)
 															 :settext(mt_stats.rem)
@@ -625,28 +637,57 @@ local multitap_update_function = function()
 						multitap_actors[pn][mti]["frame"]:visible(false)
 					end
 				end
+
+				for lane=1,4 do
+					local lperm = lane_permute(pops, lane)		-- Where does this arrow actually land?
+
+					local ex_pos_x = ArrowEffects.GetXPos(ps, lperm, 0) * scl_m + pp:GetX() + pp:GetChild("NoteField"):GetX()
+					local ex_pos_y = ArrowEffects.GetYPos(ps, lperm, 0) * scl_m + pp:GetY() + pp:GetChild("NoteField"):GetY()
+					local ex_pos_z = ArrowEffects.GetZPos(ps, lperm, 0) * scl_m + pp:GetZ() + pp:GetChild("NoteField"):GetZ()
+
+					multitap_explosions[pn][lperm]:xy(ex_pos_x, ex_pos_y)
+												  :z(ex_pos_z)
+												  :zoom(scl_m)
+												  :baserotationz(lane_rotation[lperm])
+				end
 			end
 		end
-	end -- end pcall()
-	)
+
+		TEST_last_beat = beat
+--	end -- end pcall()
+--	)
 	if status then
 		--Trace('### YAY TELP DID NOT MAKE A FUCKY WUCKY')
 	else
 		if not multitap_error then
 			Trace('### OOPS TELP HAS MADE A FUCKO BOINGO (in update function)')
 			Trace('### '..errmsg)
+			Trace('### '..debug.traceback())
 		end
 	end
 end
 
 
-
+direction_names = {"Left", "Down", "Up", "Right"}
 for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 	local pn = tonumber(string.match(pe, "[0-9]+"))
 
 	local pops = GAMESTATE:GetPlayerState(pe):GetPlayerOptions("ModsLevel_Song")
 	local noteskin_name = pops:NoteSkin()
 	noteskin_names[pn] = noteskin_name
+
+	for lane=1,4 do
+		multitap_parent[#multitap_parent+1] = NOTESKIN:LoadActorForNoteSkin("Down", "Explosion", noteskin_name)..{
+			Name="MultitapExplosionP"..pn.."_"..lane,
+			InitCommand=function(self)
+			end,
+			OnCommand=function(self)
+				multitap_explosions[pn][lane] = self
+				self:visible(true)
+				--Trace("=== Added multitap actor explosion for P"..pn..", lane "..lane)
+			end,
+		}
+	end
 	
 	for mti = 1,multitap_max do
 		multitap_parent[#multitap_parent+1] = Def.ActorFrame {
@@ -697,6 +738,7 @@ multitap_parent[#multitap_parent+1] = Def.ActorFrame {
 	Name="Update",
 	InitCommand=function(self)	
 		Trace("### im alive")
+
 		self:SetUpdateFunction(multitap_update_function)
 	end,
 
@@ -708,111 +750,3 @@ multitap_parent[#multitap_parent+1] = Def.ActorFrame {
 }
 
 return multitap_parent
-
-
---[[
-
---
--- Backup
---
-
-
-					-- Only create a tehe if the player is on SH or SX.
-					-- local diff = GAMESTATE:GetCurrentSteps(i-1):GetDifficulty()
-					-- local stype = GAMESTATE:GetCurrentSteps(i-1):GetStepsType()
-					-- if stype == 'StepsType_Dance_Single' and (diff == 'Difficulty_Challenge' or diff == 'Difficulty_Hard') then
-
-
-
-local tehe_update_function = function()
-	local status, errmsg = pcall( function() -- begin pcall()
-		-- TODO: rewrite this ~shyttt~
-
-		for idx,act in pairs(tehe_notes) do
-			local ps 	= GAMESTATE:GetPlayerState('PlayerNumber_P'..idx)
-			local pp 	= SCREENMAN:GetTopScreen():GetChild('PlayerP'..idx)
-			local pops 	= ps:GetPlayerOptions("ModsLevel_Song")
-
-			local sp 	= ps:GetSongPosition()
-			local beat 	= sp:GetSongBeat()
-			local BPS 	= sp:GetCurBPS()
-			local mrate	= GAMESTATE:GetSongOptionsObject("ModsLevel_Song"):MusicRate()
-			local scl_m = 1.0 - 0.5*pops:Mini()		-- Scaling of notes due to application of Mini
-			local lperm = lane_permute(pops, 3)		-- Where does the "up arrow" land?
-
-			local scl_w = 1.0
-			-- local scl_w = ArrowEffects.GetZoom(ps, y_off, 3)
-			-- why is the order of parameters different!!
-			-- (currently don't care because no application of Tiny to account for)
-
-			local scroll_speed = calc_xmod(pops, BPS)
-			local tehe_distance = tehe_distance_px / (scroll_speed * mrate * 64 * scl_m)
-			--Trace("$$$ P"..idx.."'s scroll_speed = "..scroll_speed)
-
-			if (beat >= tehe_beat_start and beat < tehe_beat_cross) then
-				-- Parabolic approach phase:
-				--		Swing up to and past the receptors before making contact
-				--		Start with high rotation and un-rotate as it goes 
-				--		Fade in really quickly
-				local tw 		= (beat - tehe_beat_start) / (tehe_beat_cross - tehe_beat_start)
-				local fake_beat = offset_parabola(tw, tehe_past_receptor) * tehe_distance + tehe_beat_start
-				local y_off = ArrowEffects.GetYOffset(ps, lperm, fake_beat) - ArrowEffects.GetYOffset(ps, lperm, tehe_beat_start)
-				local pos_x = ArrowEffects.GetXPos(ps, lperm, y_off) * scl_w * scl_m + pp:GetX()
-				local pos_y = ArrowEffects.GetYPos(ps, lperm, y_off) * scl_w * scl_m + pp:GetY()
-				local pos_z = ArrowEffects.GetZPos(ps, lperm, y_off) * scl_w * scl_m + pp:GetZ()
-				local rot_w = 360 * tehe_rotations * (1 - tw)*(1 - tw)
-
-				--Trace("!!! approach "..idx.." @ "..fake_beat.." -> "..y_off.." ("..pos_x..", "..pos_y..", "..pos_z..") x "..scl_m)
-
-				act:visible(true)
-				act:diffusealpha(1 - math.pow(1 - tw, 6.0))
-				act:xy(pos_x, pos_y)
-				act:z(pos_z)
-				act:baserotationz(lane_rotation[lperm])
-				act:rotationx(rot_w * 0.7)
-				act:rotationy(rot_w * 0.8)
-				act:rotationz(rot_w)
-				act:zoom(scl_w * scl_m)
-			elseif (beat >= tehe_beat_cross and beat < tehe_beat_end) then
-				-- Linear fadeout phase:
-				--		Leave the receptor in reverse with the same speed as the end of the parabola
-				--		Don't rotate
-				--		Fade out slowly
-				local tw 		= (beat - tehe_beat_cross) / (tehe_beat_cross - tehe_beat_start)
-				local tw_alpha 	= (beat - tehe_beat_cross) / (tehe_beat_end - tehe_beat_cross)
-				local fake_beat = offset_parabola_outline(tw, tehe_past_receptor) * tehe_distance + tehe_beat_cross
-				local y_off = ArrowEffects.GetYOffset(ps, lperm, fake_beat) - ArrowEffects.GetYOffset(ps, lperm, tehe_beat_cross)
-				local pos_x = ArrowEffects.GetXPos(ps, lperm, y_off) * scl_w * scl_m + pp:GetX()
-				local pos_y = ArrowEffects.GetYPos(ps, lperm, y_off) * scl_w * scl_m + pp:GetY()
-				local pos_z = ArrowEffects.GetZPos(ps, lperm, y_off) * scl_w * scl_m + pp:GetZ()
-
-				--Trace("!!! reproach "..idx.." @ "..fake_beat.." -> "..y_off.." ("..pos_x..", "..pos_y..", "..pos_z..") x "..scl_m)
-
-				act:visible(true)
-				act:diffusealpha(1-tw_alpha*tw_alpha)
-				act:xy(pos_x, pos_y)
-				act:z(pos_z)
-				act:baserotationz(lane_rotation[lperm])
-				act:rotationx(0)
-				act:rotationy(0)
-				act:rotationz(0)
-				act:zoom(scl_w * scl_m)
-			else
-				--Trace ("!!! haha bye")
-				act:visible(false)
-			end
-		end
-	end -- end pcall()
-	)
-	if status then
-		--Trace('### YAY TELP DID NOT MAKE A FUCKY WUCKY')
-	else
-		if not multitap_error then
-			Trace('### OOPS TELP HAS MADE A FUCKO BOINGO (in update function)')
-			Trace('### '..errmsg)
-		end
-	end
-end
-
-
-]]--
