@@ -49,71 +49,10 @@ end
 --
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 
-function Reflection_General(t, d)
-	d = d and d or 0	
-
-	indent = string.rep("\t", d)
-	for n,e in pairs(t) do
-		n_format = string.format("%s", n)
-		if type(e) == "function" then
-			f_info = debug.getinfo(e)
-			f_info = string.gsub(f_info, "\n", "\n\t"..indent)
-			print("::: "..indent..n_format..": function\n"..f_info)
-		elseif type(e) == "table" then
-			n_m = 0; for _ in pairs(e) do n_m = n_m + 1 end
-			print("::: "..indent..n_format..": table with "..n_m.." elements")
-			Reflection_General(e, d+1)
-		else
-			print("::: "..indent..n_format..": "..type(e))
-		end
-	end
-end
-
-function Reflection_SM5(t, d, fake_name)
-	if not t then
-		print("::: ??? null ???")
-		return
-	end
-
-	d = d and d or 0
-	fake_name = fake_name and fake_name or "<N/A>"
-
-	local indent = string.rep("\t", d)
-
-	local n_format = (t["GetName"] and t:GetName() or "")
-		  n_format = (n_format ~= "") and n_format or fake_name
-
-	local n_kids = 0
-	local s, r = pcall(function() return t:GetNumChildren() end); if s then n_kids = r end
-
-	local n_items = 0
-	for k,m in pairs(t) do
-		n_items = n_items + 1
-	end
-
-	print(":#: "..indent..n_format..": "..n_kids.." children, "..n_items.." standard members")
-
-	if n_kids > 0 then
-		local kids = t:GetChildren()
-		local i = 0
-		for k,act in pairs(kids) do
-			i = i + 1
-			Reflection_SM5(act, d+1, n_format.."->"..i)
-		end
-	end
-
-	for k,m in pairs(t) do
-		if type(m) == "table" then
-			local n_m = 0; for _ in pairs(m) do n_m = n_m + 1 end
-			print("::: "..indent.."\t"..n_format.."."..k..": table with "..n_m.." elements")
-			Reflection_SM5(m, d+1, n_format.."."..k)
-		else
-			print("::: "..indent.."\t"..n_format.."."..k..": "..m..", "..type(m))
-		end
-	end
-end
-
 function TryCommandOnLeaves(act, command_name, command_params, verbose, d, fake_name)
+	-- I ended up not needing this but I'm gonna leave it here anyway
+	-- this was An Adventure
+
 	if not act then
 		print("::: ??? null ???")												-- Am I Pregant?
 		return																	-- Am I pragnent?
@@ -481,7 +420,7 @@ for i=1,2 do
 		if multitap_explosions[pn][lane] then
 			Trace("??? do explosion pls")
 			multitap_explosions[pn][lane]:propagatecommand("Judgment")
-			multitap_explosions[pn][lane]:propagatecommand("Bright")
+			multitap_explosions[pn][lane]:propagatecommand("Dim")
 			multitap_explosions[pn][lane]:propagatecommand(string.sub(tns, 14))
 			--TryCommandOnLeaves(multitap_explosions[pn][lane], string.sub(tns, 14), nil, true)
 		end
