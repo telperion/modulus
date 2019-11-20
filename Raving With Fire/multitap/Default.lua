@@ -145,7 +145,7 @@ local multitap_parent = Def.ActorFrame {
 
 local multitap_error = false
 local multitap_previsible = 8
-local multitap_elasticity = 1
+local multitap_elasticity = 1.1
 local multitap_squishy = 0.3
 local multitap_splines_calc = {false, false}
 
@@ -174,6 +174,7 @@ local multitap_explosions = {
 	{},
 	{}
 }
+local multitap_fields = {}
 
 local multitap_chart_sel = {
 	"Hard",
@@ -509,6 +510,110 @@ local calc_xmod = function(pops, BPS)
 	end
 end
 
+local copy_transforms = function(dst, src)
+	dst:x(src:GetX())
+	   :y(src:GetY())
+	   :z(src:GetZ())
+	   :rotationx(src:GetRotationX())
+	   :rotationy(src:GetRotationY())
+	   :rotationz(src:GetRotationZ())
+--	   :zoom(src:GetZoom())
+	   :zoomx(src:GetZoomX())
+	   :zoomy(src:GetZoomY())
+	   :zoomz(src:GetZoomZ())
+end
+
+-- Why is this so inaccessibly hard!!
+local GRAY_ARROWS_Y_STANDARD 		= THEME:GetMetric("Player", "ReceptorArrowsYStandard")
+local GRAY_ARROWS_Y_REVERSE  		= THEME:GetMetric("Player", "ReceptorArrowsYReverse")
+local CENTER_Y_FOR_DILLWEEDS_ONLY	= (GRAY_ARROWS_Y_STANDARD + GRAY_ARROWS_Y_REVERSE) / 2
+Trace("### "..CENTER_Y_FOR_DILLWEEDS_ONLY.."x engineers can "..
+	  "convert 'thought' into 'piss' in their balls, and issue it in an iterative fashion.")
+
+local __SCALE = function(x, l1, h1, l2, h2)
+	return (h2 - l2) * (x - l1) / (h1 - l1) + l2
+end
+
+--[[
+	PlayerNoteFieldPositioner()
+	PushPlayerMatrix()
+	LoadMenuPerspective(
+		fovDegrees=45,
+		fWidth=SCREEN_WIDTH,
+		fHeight=SCREEN_HEIGHT,
+		fVanishPointX=SCALE(skew, 0.1f, 1.0f, x, SCREEN_CENTER_X),
+		fVanishPointY=center_y
+	)
+]]--
+
+
+local copy_transforms_player = function(dst, pp, skew, tilt, reverse)
+	skew = skew or 0.0
+	tilt = tilt or 0.0
+	reverse = reverse or false
+
+	local fov_in = 45
+	local vpx_in = __SCALE(skew, 0.1, 1.0, pp:GetX(), SCREEN_CENTER_X)
+	local vpy_in = pp:GetY() + CENTER_Y_FOR_DILLWEEDS_ONLY --__SCALE(tilt, 0.1, 1.0, 10, 60)
+	--Trace("### ... "..vpx_in..", "..vpy_in)
+
+	local reverse_mult = (reverse and -1 or 1)
+	local tilt_degrees = __SCALE(tilt, -1, 1, 30, -30) * reverse_mult
+	local zoom_for_dipsticks_only = 0
+	local yoff_for_dumbdumbs_only = 0
+	if (tilt > 0) then
+		zoom_for_dipsticks_only = __SCALE(tilt, 0, 1, 1, 0.9)
+		yoff_for_dumbdumbs_only = __SCALE(tilt, 0, 1, 0, -45) * reverse_mult
+	else
+		zoom_for_dipsticks_only = __SCALE(tilt, 0, -1, 1, 0.9)
+		yoff_for_dumbdumbs_only = __SCALE(tilt, 0, -1, 0, -20) * reverse_mult
+	end
+
+	dst:GetParent():x(pp:GetX())
+				   :y(pp:GetY() + CENTER_Y_FOR_DILLWEEDS_ONLY)
+				   :z(pp:GetZ())
+				   :rotationx(0)
+
+	-- FOV here stands for "fuck off, venerated_stepmania_developers"
+	-- TODO: account for the skewing perspective mods (Incoming & Space)
+	   :fov(fov_in)
+	   :vanishpoint(vpx_in, vpy_in)
+--	dst:fov(fov_in)
+--	   :vanishpoint(vpx_in, vpy_in)
+
+    nf = pp:GetChild("NoteField")
+	dst:x(0)
+	   :y(-yoff_for_dumbdumbs_only)
+	   :z(0)
+	   :rotationx(-tilt_degrees)
+	   :rotationy(0)
+	   :rotationz(0)
+	   :zoomx(zoom_for_dipsticks_only)
+	   :zoomy(zoom_for_dipsticks_only)
+	   :zoomz(zoom_for_dipsticks_only)
+end
+
+local copy_transforms_arrow = function(dst, ps, lane, beat, pos, apply_mini, apply_extra)
+	-- Additional translation and rotation are added.
+	-- Additional zoom is multiplied.
+	-- It's Only Natural
+
+	apply_extra = apply_extra and apply_extra or {}
+	apply_mini = apply_mini and apply_mini or 0
+
+	local eff_m = 1 - 0.5 * apply_mini
+	local y_off = ArrowEffects.GetYOffset(ps, lane, beat + pos) - ArrowEffects.GetYOffset(ps, lane, beat)
+
+	dst:x(ArrowEffects.GetXPos(ps, lane, y_off)			+ (apply_extra["x"] and apply_extra["x"] or 0))
+	   :y(ArrowEffects.GetYPos(ps, lane, y_off) 		+ (apply_extra["y"] and apply_extra["y"] or 0))
+	   :z(ArrowEffects.GetZPos(ps, lane, y_off)		    + (apply_extra["z"] and apply_extra["z"] or 0))
+--	   :rotationx(ArrowEffects.GetRotationX(ps, y_off, 0, lane) 	+ (apply_extra["rotationx"] and apply_extra["rotationx"] or 0))
+--	   :rotationy(ArrowEffects.GetRotationY(ps, y_off, lane) 	+ (apply_extra["rotationy"] and apply_extra["rotationy"] or 0))
+--	   :rotationz(ArrowEffects.GetRotationZ(ps, beat, false, lane) 	+ (apply_extra["rotationz"] and apply_extra["rotationz"] or 0))
+	   :zoomx(ArrowEffects.GetZoom(ps, y_off, lane) 	* (apply_extra["zoomx"] and apply_extra["zoomx"] or 1))
+	   :zoomy(ArrowEffects.GetZoom(ps, y_off, lane) 	* (apply_extra["zoomy"] and apply_extra["zoomy"] or 1))
+	   :zoomz(ArrowEffects.GetZoom(ps, y_off, lane)		* (apply_extra["zoomz"] and apply_extra["zoomz"] or 1))
+end
 
 
 local TEST_px_per_beat = SCREEN_HEIGHT * 0.5
@@ -534,6 +639,10 @@ local multitap_update_function = function()
 			local scl_m = 1.0 - 0.5*pops:Mini()		-- Scaling of notes due to application of Mini
 													-- TODO: replace with ArrowEffects/spline acquisition?
 
+			-- TESTING ONLY 
+			pops:Tilt(1.5*math.sin(beat*math.pi/8.0)*(pn==2 and 1 or -1), 1000.0)
+
+			-- This is a convenient enough spot to do just-in-time one-time initialization lol
 			if not multitap_splines_calc[pn] then
 				full_chart_name = GAMESTATE:GetCurrentSteps(pn-1):GetDifficulty()
 				multitap_chart_sel[pn] = string.sub(full_chart_name, 12)
@@ -542,6 +651,12 @@ local multitap_update_function = function()
 				multitap_splines_calc[pn] = true
 			end
 
+			-- Adjust the multitap fields with the same transforms the players themselves get.
+			-- See Player::PlayerNoteFieldPositioner::PlayerNoteFieldPositioner().
+			copy_transforms_player(multitap_fields[pn], pp, pops:Skew(), pops:Tilt())
+
+			-- Read the texture coordinate shift that changes quantization in the noteskin.
+			-- Some noteskins are implemented as vertical shifts and some horizontal.
 			local tex_color_interval = {
 				x = NOTESKIN:GetMetricFForNoteSkin("", "TapNoteNoteColorTextureCoordSpacingX", noteskin_names[pn]),
 				y = NOTESKIN:GetMetricFForNoteSkin("", "TapNoteNoteColorTextureCoordSpacingY", noteskin_names[pn]),
@@ -555,22 +670,18 @@ local multitap_update_function = function()
 					
 					local lperm = lane_permute(pops, mt_desc.lane)		-- Where does this arrow actually land?
 
-					if mt_stats.vis then
-						local y_off = ArrowEffects.GetYOffset(ps, lperm, beat + mt_stats.pos) - ArrowEffects.GetYOffset(ps, lperm, beat)
-						local pos_x = ArrowEffects.GetXPos(ps, lperm, y_off) * scl_m + pp:GetX() + pp:GetChild("NoteField"):GetX()
-						local pos_y = ArrowEffects.GetYPos(ps, lperm, y_off) * scl_m + pp:GetY() + pp:GetChild("NoteField"):GetY()
-						local pos_z = ArrowEffects.GetZPos(ps, lperm, y_off) * scl_m + pp:GetZ() + pp:GetChild("NoteField"):GetZ()
+					if mt_stats.vis then						
+						copy_transforms_arrow(multitap_actors[pn][mti]["frame"], ps, lperm, beat, mt_stats.pos, pops:Mini(), {
+--							x = pp:GetChild("NoteField"):GetX(),
+--							y = pp:GetChild("NoteField"):GetY(),
+--							z = pp:GetChild("NoteField"):GetZ(),
+							zoomy = 1 + mt_stats.sqh
+						})
 
 						--Trace("??? "..pp:GetChild("NoteField"):GetY())
 						--Trace("!!! reproach "..pn..", "..mti.." @ "..beat.." + "..mt_stats.pos.." -> "..y_off.." ("..pos_x..", "..pos_y..", "..pos_z..") x "..scl_m)
 
 						multitap_actors[pn][mti]["frame"]:visible(true)
-														 :xy(pos_x, pos_y)
-														 :z(pos_z)
-														 :zoom(scl_m)
-														 :zoomy(scl_m * (1 + mt_stats.sqh))
-						--								 :xy(TEST_px_per_lane * (mt_desc.lane - 2.5) + TEST_center_x,
-						--								 	 TEST_px_per_beat * mt_stats.pos + TEST_zero_y)
 						multitap_actors[pn][mti]["arrow"]:baserotationz(lane_rotation[lperm])
 														 :diffuse(lerp_color(mt_stats.dif, color("#666666"), color("#ffffff")))
 														 :texturetranslate(
@@ -605,13 +716,12 @@ local multitap_update_function = function()
 				for lane=1,4 do
 					local lperm = lane_permute(pops, lane)		-- Where does this arrow actually land?
 
-					local ex_pos_x = ArrowEffects.GetXPos(ps, lperm, 0) * scl_m + pp:GetX() + pp:GetChild("NoteField"):GetX()
-					local ex_pos_y = ArrowEffects.GetYPos(ps, lperm, 0) * scl_m + pp:GetY() + pp:GetChild("NoteField"):GetY()
-					local ex_pos_z = ArrowEffects.GetZPos(ps, lperm, 0) * scl_m + pp:GetZ() + pp:GetChild("NoteField"):GetZ()
+					local ex_pos_x = ArrowEffects.GetXPos(ps, lperm, 0) --+ pp:GetChild("NoteField"):GetX()
+					local ex_pos_y = ArrowEffects.GetYPos(ps, lperm, 0) --+ pp:GetChild("NoteField"):GetY()
+					local ex_pos_z = ArrowEffects.GetZPos(ps, lperm, 0) --+ pp:GetChild("NoteField"):GetZ()
 
 					multitap_explosions[pn][lperm]:xy(ex_pos_x, ex_pos_y)
 												  :z(ex_pos_z)
-												  :zoom(scl_m)
 												  :baserotationz(lane_rotation[lperm])
 												  :visible(show_false_explosion[lperm])
 				end
@@ -641,8 +751,26 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 	local noteskin_name = pops:NoteSkin()
 	noteskin_names[pn] = noteskin_name
 
+	local multitap_prep = Def.ActorFrame {
+		Name="MultitapFrameP"..pn,
+		InitCommand = function(self)
+		end,
+		OnCommand = function(self)
+			multitap_fields[pn] = self
+		end,
+
+		Def.Sprite {
+			Texture="britneyflat.png",
+			OnCommand=function(self)
+				self:diffusealpha(0.5)
+					:zoomtowidth(256)
+					:zoomtoheight(GRAY_ARROWS_Y_REVERSE - GRAY_ARROWS_Y_STANDARD)
+			end,
+		},
+	}
+
 	for lane=1,4 do
-		multitap_parent[#multitap_parent+1] = NOTESKIN:LoadActorForNoteSkin("Down", "Explosion", noteskin_name)..{
+		multitap_prep[#multitap_prep+1] = NOTESKIN:LoadActorForNoteSkin("Down", "Explosion", noteskin_name)..{
 			Name="MultitapExplosionP"..pn.."_"..lane,
 			InitCommand=function(self)
 			end,
@@ -657,7 +785,7 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 	end
 	
 	for mti = 1,multitap_max do
-		multitap_parent[#multitap_parent+1] = Def.ActorFrame {
+		multitap_prep[#multitap_prep+1] = Def.ActorFrame {
 			Name="MultitapP"..pn.."_"..mti,
 			InitCommand=function(self)
 			end,
@@ -699,6 +827,8 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 			},
 		}
 	end
+
+	multitap_parent[#multitap_parent+1] = Def.ActorFrame{multitap_prep}
 end
 
 multitap_parent[#multitap_parent+1] = Def.ActorFrame {
