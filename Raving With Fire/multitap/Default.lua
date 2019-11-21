@@ -4,7 +4,7 @@
 --		
 --		Author: 	Telperion
 --		Date: 		2019-11-03
---		Version:	0.9
+--		Version:	1.0
 --
 -------------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@
 --
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 multitaps = {}
-multitap_version = {0, 9}
+multitap_version = {1, 0}
 
 local whereTheFlipAmI = GAMESTATE:GetCurrentSong():GetSongDir()
 dofile(whereTheFlipAmI .. "multitap/multitap_data.lua")
@@ -35,7 +35,8 @@ if multitaps["_version"] then
 		version_mismatch(multitaps["_version"], multitap_version)
 		return Def.ActorFrame{}
 	end
-	if multitaps["_version"][2] > multitap_version[2] then
+	if (multitaps["_version"][1] == multitap_version[1]) and 
+		(multitaps["_version"][2] > multitap_version[2]) then
 		version_mismatch(multitaps["_version"], multitap_version)
 		return Def.ActorFrame{}
 	end
@@ -145,6 +146,7 @@ local multitap_parent = Def.ActorFrame {
 
 local multitap_error = false
 local multitap_previsible = 8
+local multitap_basebounce = 1.5
 local multitap_elasticity = 1.1
 local multitap_squishy = 0.3
 local multitap_splines_calc = {false, false}
@@ -391,7 +393,7 @@ local calc_multitap_phase = function(mt_desc, b)
 	ret.qtn = calc_qtzn(mt_taps[2])
 	ret.dif = 0
 	ret.vis = (ret.pos < multitap_previsible)
-	local el = 1
+	local el = multitap_basebounce * (mt_desc["peak"] and mt_desc["peak"] or 1)
 
 	for i = 1,#mt_taps do
 		-- Any bounce cases happen here.
@@ -419,7 +421,7 @@ for i=1,2 do
 	local pn = i
 	_G["multitap_note_callback_P"..i] = function(lane, tns, is_bright)
 		if multitap_explosions[pn][lane] then
-			Trace("??? do explosion pls")
+			--Trace("??? do explosion pls")
 			multitap_explosions[pn][lane]:propagatecommand("Judgment")
 			multitap_explosions[pn][lane]:propagatecommand("Dim")
 			multitap_explosions[pn][lane]:propagatecommand(string.sub(tns, 14))
@@ -570,9 +572,8 @@ local copy_transforms_player = function(dst, pp, skew, tilt, reverse)
 	end
 
 	dst:GetParent():x(pp:GetX())
-				   :y(pp:GetY() + CENTER_Y_FOR_DILLWEEDS_ONLY)
+				   :y(pp:GetY())
 				   :z(pp:GetZ())
-				   :rotationx(0)
 
 	-- FOV here stands for "fuck off, venerated_stepmania_developers"
 	-- TODO: account for the skewing perspective mods (Incoming & Space)
@@ -582,37 +583,41 @@ local copy_transforms_player = function(dst, pp, skew, tilt, reverse)
 --	   :vanishpoint(vpx_in, vpy_in)
 
     nf = pp:GetChild("NoteField")
-	dst:x(0)
-	   :y(-yoff_for_dumbdumbs_only)
-	   :z(0)
-	   :rotationx(-tilt_degrees)
-	   :rotationy(0)
-	   :rotationz(0)
-	   :zoomx(zoom_for_dipsticks_only)
-	   :zoomy(zoom_for_dipsticks_only)
-	   :zoomz(zoom_for_dipsticks_only)
+	dst:x(nf:GetX())
+	   :y(nf:GetY() + yoff_for_dumbdumbs_only)
+	   :z(nf:GetZ())
+	   :rotationx(nf:GetRotationX())
+	   :rotationy(nf:GetRotationY())
+	   :rotationz(nf:GetRotationZ())
+	   :zoomx(nf:GetZoomX() * zoom_for_dipsticks_only)
+	   :zoomy(nf:GetZoomY() * zoom_for_dipsticks_only)
+	   :zoomz(nf:GetZoomZ() * zoom_for_dipsticks_only)
 end
 
-local copy_transforms_arrow = function(dst, ps, lane, beat, pos, apply_mini, apply_extra)
+local copy_transforms_arrow = function(dst, arrow_only, ps, lane, beat, pos, apply_extra)
 	-- Additional translation and rotation are added.
 	-- Additional zoom is multiplied.
 	-- It's Only Natural
 
 	apply_extra = apply_extra and apply_extra or {}
-	apply_mini = apply_mini and apply_mini or 0
 
-	local eff_m = 1 - 0.5 * apply_mini
 	local y_off = ArrowEffects.GetYOffset(ps, lane, beat + pos) - ArrowEffects.GetYOffset(ps, lane, beat)
 
-	dst:x(ArrowEffects.GetXPos(ps, lane, y_off)			+ (apply_extra["x"] and apply_extra["x"] or 0))
-	   :y(ArrowEffects.GetYPos(ps, lane, y_off) 		+ (apply_extra["y"] and apply_extra["y"] or 0))
-	   :z(ArrowEffects.GetZPos(ps, lane, y_off)		    + (apply_extra["z"] and apply_extra["z"] or 0))
---	   :rotationx(ArrowEffects.GetRotationX(ps, y_off, 0, lane) 	+ (apply_extra["rotationx"] and apply_extra["rotationx"] or 0))
---	   :rotationy(ArrowEffects.GetRotationY(ps, y_off, lane) 	+ (apply_extra["rotationy"] and apply_extra["rotationy"] or 0))
---	   :rotationz(ArrowEffects.GetRotationZ(ps, beat, false, lane) 	+ (apply_extra["rotationz"] and apply_extra["rotationz"] or 0))
-	   :zoomx(ArrowEffects.GetZoom(ps, y_off, lane) 	* (apply_extra["zoomx"] and apply_extra["zoomx"] or 1))
-	   :zoomy(ArrowEffects.GetZoom(ps, y_off, lane) 	* (apply_extra["zoomy"] and apply_extra["zoomy"] or 1))
-	   :zoomz(ArrowEffects.GetZoom(ps, y_off, lane)		* (apply_extra["zoomz"] and apply_extra["zoomz"] or 1))
+	if arrow_only then
+		dst:rotationx(ArrowEffects.GetRotationX(ps, y_off, 0, lane) 		+ (apply_extra["rotationx"] and apply_extra["rotationx"] or 0) - 180/math.pi)	-- ??????
+		   :rotationy(ArrowEffects.GetRotationY(ps, y_off, lane) 			+ (apply_extra["rotationy"] and apply_extra["rotationy"] or 0))
+		   :rotationz(ArrowEffects.GetRotationZ(ps, beat+pos, false, lane) 	+ (apply_extra["rotationz"] and apply_extra["rotationz"] or 0))
+--		   :glow(color(1, 1, 1, ArrowEffects.GetGlow(ps, lane, y_off)))		-- TODO: Seems to be always 1? that's weird. I'll fix this when it's actually important
+	else
+		dst:x(ArrowEffects.GetXPos(ps, lane, y_off)			+ (apply_extra["x"] and apply_extra["x"] or 0))
+		   :y(ArrowEffects.GetYPos(ps, lane, y_off) 		+ (apply_extra["y"] and apply_extra["y"] or 0))
+		   :z(ArrowEffects.GetZPos(ps, lane, y_off)		    + (apply_extra["z"] and apply_extra["z"] or 0))
+		   :zoomx(ArrowEffects.GetZoom(ps, y_off, lane) 	* (apply_extra["zoomx"] and apply_extra["zoomx"] or 1))
+		   :zoomy(ArrowEffects.GetZoom(ps, y_off, lane) 	* (apply_extra["zoomy"] and apply_extra["zoomy"] or 1))
+		   :zoomz(ArrowEffects.GetZoom(ps, y_off, lane)		* (apply_extra["zoomz"] and apply_extra["zoomz"] or 1))
+		   :diffusealpha(ArrowEffects.GetAlpha(ps, lane, y_off))
+		   
+	end
 end
 
 
@@ -640,7 +645,9 @@ local multitap_update_function = function()
 													-- TODO: replace with ArrowEffects/spline acquisition?
 
 			-- TESTING ONLY 
-			pops:Tilt(1.5*math.sin(beat*math.pi/8.0)*(pn==2 and 1 or -1), 1000.0)
+			-- pops:Tilt(1.5*math.sin(beat*math.pi/8.0)*(pn==2 and 1 or -1), 1000.0)
+			-- pops:Skew(1.5*math.cos(beat*math.pi/8.0)*(pn==2 and 1 or -1), 1000.0)
+			-- pops:Roll((pn==2 and 1 or -1), 1000.0)
 
 			-- This is a convenient enough spot to do just-in-time one-time initialization lol
 			if not multitap_splines_calc[pn] then
@@ -653,7 +660,13 @@ local multitap_update_function = function()
 
 			-- Adjust the multitap fields with the same transforms the players themselves get.
 			-- See Player::PlayerNoteFieldPositioner::PlayerNoteFieldPositioner().
-			copy_transforms_player(multitap_fields[pn], pp, pops:Skew(), pops:Tilt())
+			copy_transforms_player(
+				multitap_fields[pn], 
+				pp, 
+				pops:Skew(), 
+				pops:Tilt(), 
+				pops:GetReversePercentForColumn(0) > 0.5		-- ...sure, whatecer
+			)
 
 			-- Read the texture coordinate shift that changes quantization in the noteskin.
 			-- Some noteskins are implemented as vertical shifts and some horizontal.
@@ -670,14 +683,7 @@ local multitap_update_function = function()
 					
 					local lperm = lane_permute(pops, mt_desc.lane)		-- Where does this arrow actually land?
 
-					if mt_stats.vis then						
-						copy_transforms_arrow(multitap_actors[pn][mti]["frame"], ps, lperm, beat, mt_stats.pos, pops:Mini(), {
---							x = pp:GetChild("NoteField"):GetX(),
---							y = pp:GetChild("NoteField"):GetY(),
---							z = pp:GetChild("NoteField"):GetZ(),
-							zoomy = 1 + mt_stats.sqh
-						})
-
+					if mt_stats.vis then
 						--Trace("??? "..pp:GetChild("NoteField"):GetY())
 						--Trace("!!! reproach "..pn..", "..mti.." @ "..beat.." + "..mt_stats.pos.." -> "..y_off.." ("..pos_x..", "..pos_y..", "..pos_z..") x "..scl_m)
 
@@ -688,6 +694,23 @@ local multitap_update_function = function()
 							tex_color_interval["x"] * qtzn_tex[mt_stats.qtc],
 							tex_color_interval["y"] * qtzn_tex[mt_stats.qtc]
 							)
+
+						copy_transforms_arrow(
+							multitap_actors[pn][mti]["frame"], false,
+							ps,
+							lperm,
+							beat,
+							mt_stats.pos,
+							{zoomy = 1 + mt_stats.sqh}
+						)
+						copy_transforms_arrow(
+							multitap_actors[pn][mti]["arrow"], true,
+							ps,
+							lperm,
+							beat,
+							mt_stats.pos,
+							{}
+						)
 
 						-- Be prepared to fire a fake explosion if any multitap in this lane is active.
 						show_false_explosion[lperm] = true
@@ -759,6 +782,7 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 			multitap_fields[pn] = self
 		end,
 
+		--[[
 		Def.Sprite {
 			Texture="britneyflat.png",
 			OnCommand=function(self)
@@ -767,6 +791,7 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 					:zoomtoheight(GRAY_ARROWS_Y_REVERSE - GRAY_ARROWS_Y_STANDARD)
 			end,
 		},
+		]]--
 	}
 
 	for lane=1,4 do
