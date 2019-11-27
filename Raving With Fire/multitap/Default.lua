@@ -393,7 +393,7 @@ local calc_multitap_phase = function(mt_desc, b)
 	ret.qtn = calc_qtzn(mt_taps[2])
 	ret.dif = 0
 	ret.vis = (ret.pos < multitap_previsible)
-	local el = multitap_basebounce * (mt_desc["peak"] and mt_desc["peak"] or 1)
+	local el = (mt_desc["peak"] and mt_taps[2]) and (mt_desc["peak"] / (mt_taps[2] - mt_taps[1])) or multitap_basebounce
 
 	for i = 1,#mt_taps do
 		-- Any bounce cases happen here.
@@ -401,7 +401,7 @@ local calc_multitap_phase = function(mt_desc, b)
 			break
 		end
 
-		el = el * multitap_elasticity
+		el = mt_desc["peak"] and (mt_desc["peak"] / (mt_taps[i+1] - mt_taps[i])) or (el * multitap_elasticity)
 
 		-- We're assured to have an i+1 element here because
 		-- we've already jumped out when b > mt_taps[#mt_taps].
