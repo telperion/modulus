@@ -214,7 +214,7 @@ qtzn_tex[48] = 7
 -- an arbitrary noteskin, so I'm precalculating some options based on the
 -- Cabby noteskin pack.
 local qtzn_color_tables = {
-	default = {					-- whole texture I'm fucking busy only get few color
+	vivid = {					-- whole texture I'm fucking busy only get few color
 		{"ffffff", "cccccc"},	-- 4ths
 		{"ffffff", "cccccc"},	-- 8ths
 		{"ffffff", "cccccc"},	-- 12ths
@@ -254,6 +254,16 @@ local qtzn_color_tables = {
 		{"90e3ff", "43d0ff"},	-- 64ths
 		{"85ff7c", "30ff20"},	-- 192nds
 	},
+	rainbow = {					-- some time...you just haven`t care
+		{"ff6100", "ff0000"},	-- 4ths
+		{"00a2ff", "00f0ff"},	-- 8ths
+		{"fa81d1", "7a15fe"},	-- 12ths
+		{"fa81d1", "7a15fe"},	-- 16ths
+		{"fa81d1", "7a15fe"},	-- 24ths
+		{"fa81d1", "7a15fe"},	-- 32nds
+		{"fa81d1", "7a15fe"},	-- 64ths
+		{"fa81d1", "7a15fe"},	-- 192nds
+	},
 	horseshoe = {				-- I think it's very unprofessional of the official Trot 100 News account to try and cancel an artist.
 		{"dfa9db", "a96fba"},	-- 4ths
 		{"faba61", "d49234"},	-- 8ths
@@ -265,28 +275,54 @@ local qtzn_color_tables = {
 		{"ebe6ad", "edb032"},	-- 192nds
 	},
 }
-qtzn_color_tables["cel"]			= qtzn_color_tables["shadow"]
+-- Anything not explicitly assigned here will pick up the "vivid" behavior (no color distinction).
+qtzn_color_tables["ascii"]							= qtzn_color_tables["note"]
+qtzn_color_tables["cel"]							= qtzn_color_tables["shadow"]
 --qtzn_color_tables["color"]
-qtzn_color_tables["cyber"]			= qtzn_color_tables["shadow"]
-qtzn_color_tables["ddr"]			= qtzn_color_tables["default"]
-qtzn_color_tables["enchantment"]	= qtzn_color_tables["shadow"]
-qtzn_color_tables["equality"]		= qtzn_color_tables["default"]
-qtzn_color_tables["excel"]			= qtzn_color_tables["shadow"]
-qtzn_color_tables["horsegroove"]	= qtzn_color_tables["shadow"]
-qtzn_color_tables["horsenote"]		= qtzn_color_tables["note"]
+qtzn_color_tables["cyber"]							= qtzn_color_tables["shadow"]
+qtzn_color_tables["default"]						= qtzn_color_tables["note"]
+qtzn_color_tables["delta"]							= qtzn_color_tables["shadow"]
+qtzn_color_tables["enchantment"]					= qtzn_color_tables["shadow"]
+qtzn_color_tables["easyv2"]							= qtzn_color_tables["note"]
+qtzn_color_tables["exactv2"]						= qtzn_color_tables["note"]
+qtzn_color_tables["excel"]							= qtzn_color_tables["shadow"]
+qtzn_color_tables["excelx"]							= qtzn_color_tables["shadow"]
+qtzn_color_tables["horsehorsenote"]					= qtzn_color_tables["note"]
+qtzn_color_tables["horsegroove"]					= qtzn_color_tables["shadow"]
+qtzn_color_tables["horsenote"]						= qtzn_color_tables["note"]
+qtzn_color_tables["horsemaniax"]					= qtzn_color_tables["shadow"]
 --qtzn_color_tables["horseshoe"]
-qtzn_color_tables["metal"]			= qtzn_color_tables["shadow"]
+qtzn_color_tables["lambda"]							= qtzn_color_tables["note"]
+qtzn_color_tables["metal"]							= qtzn_color_tables["shadow"]
+qtzn_color_tables["midi-note"]						= qtzn_color_tables["note"]
+qtzn_color_tables["midi-note-3d"]					= qtzn_color_tables["note"]
+qtzn_color_tables["midi-solo"]						= qtzn_color_tables["rainbow"]
 --qtzn_color_tables["note"]
-qtzn_color_tables["onlyonecouples"]	= qtzn_color_tables["shadow"]
-qtzn_color_tables["rainbow"]		= qtzn_color_tables["default"]
-qtzn_color_tables["robot"]			= qtzn_color_tables["default"]
+qtzn_color_tables["onlyonecouples"]					= qtzn_color_tables["shadow"]
+qtzn_color_tables["peter-ddrlike"]					= qtzn_color_tables["shadow"]
+qtzn_color_tables["peterddrnote"]					= qtzn_color_tables["color"]
+qtzn_color_tables["peterddrrainbow"]				= qtzn_color_tables["rainbow"]
+qtzn_color_tables["peters-ddrlike"]					= qtzn_color_tables["shadow"]
+qtzn_color_tables["peters-ddr-note"]				= qtzn_color_tables["color"]
+qtzn_color_tables["peters-ddr-rainbow"]				= qtzn_color_tables["rainbow"]
+qtzn_color_tables["peters-scalable-cel"]			= qtzn_color_tables["shadow"]
+qtzn_color_tables["peters-scalable-vibrantmetal"]	= qtzn_color_tables["shadow"]
+--qtzn_color_tables["rainbow"]
+qtzn_color_tables["retro"]							= qtzn_color_tables["note"]
+qtzn_color_tables["retrobar"]						= qtzn_color_tables["note"]
 --qtzn_color_tables["shadow"]
-qtzn_color_tables["solo"]			= qtzn_color_tables["shadow"]
-qtzn_color_tables["toonprints"]		= qtzn_color_tables["horseshoe"]
-qtzn_color_tables["trax"]			= qtzn_color_tables["note"]
-qtzn_color_tables["vel"]			= qtzn_color_tables["shadow"]
-qtzn_color_tables["vintage"]		= qtzn_color_tables["shadow"]
-qtzn_color_tables["vivid"]			= qtzn_color_tables["default"]
+qtzn_color_tables["scalable"]						= qtzn_color_tables["shadow"]
+qtzn_color_tables["scalable-cel"]					= qtzn_color_tables["shadow"]
+qtzn_color_tables["scalable-metal"]					= qtzn_color_tables["shadow"]
+qtzn_color_tables["solo"]							= qtzn_color_tables["rainbow"]
+qtzn_color_tables["spotlight"]						= qtzn_color_tables["shadow"]
+qtzn_color_tables["toonprints"]						= qtzn_color_tables["horseshoe"]
+qtzn_color_tables["trax"]							= qtzn_color_tables["note"]
+qtzn_color_tables["vel"]							= qtzn_color_tables["shadow"]
+qtzn_color_tables["vibrant-cel"]					= qtzn_color_tables["shadow"]
+qtzn_color_tables["vibrant-metal"]					= qtzn_color_tables["shadow"]
+qtzn_color_tables["vintage"]						= qtzn_color_tables["shadow"]
+--qtzn_color_tables["vivid"]
 
 local _BB = function(b)
 	return math.floor(b*48 + 0.5)
@@ -717,7 +753,7 @@ local multitap_update_function = function()
 
 						if mt_stats.rem > 1 then
 							local noteskin_name = string.lower(noteskin_names[pn])
-							local color_pair = qtzn_color_tables["default"][1]
+							local color_pair = qtzn_color_tables["vivid"][1]
 							if qtzn_color_tables[noteskin_name] and not tex_color_is_rhythm then
 								color_pair = qtzn_color_tables[noteskin_name][qtzn_tex[mt_stats.qtn]+1]
 							end
