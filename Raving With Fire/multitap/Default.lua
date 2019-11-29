@@ -881,7 +881,7 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 			},
 			Def.BitmapText {
 				Name="MultitapTextP"..pn.."_"..mti,
-				Font="_komika axis 36px.ini",
+				Font="_komika axis 42px.ini",
 				Text="",
 				InitCommand=function(self)
 				end,
