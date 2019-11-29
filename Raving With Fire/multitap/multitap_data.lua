@@ -4,6 +4,8 @@
 -- Generate this file by using Telperion's Python chart utilities.
 -- MultitapsWorkflow(r'C:\path\to\simfile.sm')
 --
+-- You can also probably guess the format yourself if you don't want to
+-- wait for him to get around to releasing *that* part of it...--
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 
 multitaps = {
@@ -928,8 +930,6 @@ multitaps = {
 			 371.000,
 			 372.000,
 		}},
-		{lane = 2, taps = {
-		}},
 		{lane = 3, taps = {
 			 368.000,
 			 370.000,
@@ -947,8 +947,6 @@ multitaps = {
 		{lane = 2, taps = {
 			 376.000,
 			 378.000,
-		}},
-		{lane = 3, taps = {
 		}},
 		{lane = 4, taps = {
 			 376.000,

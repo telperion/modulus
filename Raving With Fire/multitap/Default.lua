@@ -4,7 +4,7 @@
 --		
 --		Author: 	Telperion
 --		Date: 		2019-11-03
---		Version:	1.0
+--		Version:	1.1
 --
 -------------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@
 --
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 multitaps = {}
-multitap_version = {1, 0}
+multitap_version = {1, 1}
 
 local whereTheFlipAmI = GAMESTATE:GetCurrentSong():GetSongDir()
 dofile(whereTheFlipAmI .. "multitap/multitap_data.lua")
@@ -129,6 +129,15 @@ function TryCommandOnLeaves(act, command_name, command_params, verbose, d, fake_
 		end
 	end
 end
+
+--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
+--
+-- holh fucf?
+--
+--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
+
+local sm_version = ProductVersion()
+MYSTERIOUS_VERSION_DEPENDENT_RADIAN_POLTERGEIST = (string.sub(sm_version, 1, 3) == "5.1") and (-180 / math.pi) or 0
 
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 --
@@ -640,7 +649,7 @@ local copy_transforms_arrow = function(dst, arrow_only, ps, lane, beat, pos, app
 	local y_off = ArrowEffects.GetYOffset(ps, lane, beat + pos) - ArrowEffects.GetYOffset(ps, lane, beat)
 
 	if arrow_only then
-		dst:rotationx(ArrowEffects.GetRotationX(ps, y_off, 0, lane) 		+ (apply_extra["rotationx"] and apply_extra["rotationx"] or 0) - 180/math.pi)	-- ??????
+		dst:rotationx(ArrowEffects.GetRotationX(ps, y_off, 0, lane) 		+ (apply_extra["rotationx"] and apply_extra["rotationx"] or 0) + MYSTERIOUS_VERSION_DEPENDENT_RADIAN_POLTERGEIST)	-- ??????
 		   :rotationy(ArrowEffects.GetRotationY(ps, y_off, lane) 			+ (apply_extra["rotationy"] and apply_extra["rotationy"] or 0))
 		   :rotationz(ArrowEffects.GetRotationZ(ps, beat+pos, false, lane) 	+ (apply_extra["rotationz"] and apply_extra["rotationz"] or 0))
 --		   :glow(color(1, 1, 1, ArrowEffects.GetGlow(ps, lane, y_off)))		-- TODO: Seems to be always 1? that's weird. I'll fix this when it's actually important
