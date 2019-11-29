@@ -3,14 +3,84 @@
 --		Multitap Factory & Assistance
 --		
 --		Author: 	Telperion
---		Date: 		2019-11-03
+--		Date: 		2019-11-29
 --		Version:	1.1
+--		Target:		SM5.0.12+
+--
+-------------------------------------------------------------------------------
+--
+--		So, like...it's been three years since UKSRT8 and TaroNuke's
+--		"Hardware Bullshit Tournament", the event where a prototype of a dance
+--		pad with fine-grained pressure response got an exhibition with a whole
+--		set of files featuring new (to 4-panel) chart mechanics. It really was
+--		a blast! and I've wished for a while now that there would eventually be
+--		some way to play the whole thing at home.
+--
+--		During a post-UKSRTX hangout, Taro lugged the platform out so newcomers
+--		who hadn't been around for UKSRT8 could give the HBT files a shot. 
+--		While watching, something clicked in my brain: the pieces of a few 
+--		half-finished SM5 mods files I had lying around could be assembled,
+--		with a little extra work, into the HBT multitap note type.
+--		[https://www.youtube.com/watch?v=OQiZJ38fDJM&t=1m04s]
+--
+--		I got to sweep out some very dark corners of StepMania 5 with this one:
+--		*	You can just *make* fakes and explosions, if you hook them up right
+--		*	Really glad non-beat-subtracting offset zoom splines work the way
+--			I expected, because I couldn't think of any sensible other options
+--		*	Parameter ordering in ArrowEffects:Get<>() calls is spicy
+--				(which will eventually require an update to this code, because
+--				I opened my big mouth :P)
+--		*	Sad about lack of access to the FOV and vanishing point of an actor
+--				(straight up translated portions of the C++ source for that)
+--		*	Mysterious version-dependent radian poltergeist?? hello??????
+--		*	I didn't actually know propagatecommand existed until I wrote a 
+--			(poorly-covering) function to do the same thing with reflection
+--		*	Kinda wish there was a generic way to retrieve the color scheme of
+--			a rhythm noteskin (e.g., solo vs. note)
+--		*	Playfields aren't vertically centered in the screen and this is 
+--			*theme-dependent* and although I understand why that might be
+--			useful I sure as hell am allowed to complain about it
+--
+--		But the upshot is:
+--		*	You can write your own multitap files!
+--			1.	Copy this FG animation (multitap\*) into your song directory
+--			2.	Copy the #FGCHANGES: line into your .ssc file
+--			3.	Replace multitap_data.lua to suit your chart
+--				(eventually I will also provide autogeneration code for this
+--				based on interpreting the corresponding double slot)
+--			4.	Increase brain wrinkliness
+--			5a.	Have a tappy slappy time
+--			5b.	Recoil in horror from what you have brought into existence
+--		*	Multitaps should be compatible with most common SM5 noteskins
+--		*	Multitaps will act like regular taps under all* mods
+--		*	Multitap-enabled files will work on most cabs running
+--			SM5.0.12+ and Simply Love
+--
+--		TODO:
+--		*	Soften the hardcoding of 4-panel mode
+--		*	Soften use of 45-degree FOV for spoofing perspective mods (just in
+--			case other FG changes want to mess with that)
+--		*	Haven't figured out how to implement arrow glow yet (for use
+--			during stealth/hidden/sudden sections)
+--		*	Some themes (Lambda in particular) throw off my Mini calculations
+--		*	Track down the mysterious version-dependent radian poltergeist
+--		*	Multitaps under Cmod don't move smoothly. For now I'm pretending
+--			this is a feature :)
+--		*	nITG compatibility...
+--
+--		TRICKY:
+--		*	This implementation of multitaps locks down zoom splines - no 
+--			additional FG animations should attempt to use them without
+--			accounting for the multitap regions
+--		*	Anything in the multitap regions will be hidden, but only taps get
+--			re-presented to the player. Lifts, mines, and fakes will be
+--			invisible (but still hittable...)
 --
 -------------------------------------------------------------------------------
 
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 --
--- Generate the below file by using Telperion's Python chart utilities.
+-- Generate multitap_data.lua using Telperion's Python chart utilities.
 -- MultitapsWorkflow(r'C:\path\to\simfile.sm')
 --
 -- Version matching performed here.
@@ -19,9 +89,11 @@
 multitaps = {}
 multitap_version = {1, 1}
 
+-- Load multitap data into workspace
 local whereTheFlipAmI = GAMESTATE:GetCurrentSong():GetSongDir()
 dofile(whereTheFlipAmI .. "multitap/multitap_data.lua")
 
+-- Compare version of multitap data and multitap parser.
 local version_mismatch = function(mv_data, mv_parser)
 	SCREENMAN:SystemMessage("### Multitap version mismatch: data @ "..mv_data[1].."."..mv_data[2]..", parser @ "..mv_parser[1].."."..mv_parser[2])
 end
@@ -31,10 +103,12 @@ end
 
 if multitaps["_version"] then
 	version_record(multitaps["_version"], multitap_version)
+	-- Data version major can't be greater than parser version major
 	if multitaps["_version"][1] > multitap_version[1] then
 		version_mismatch(multitaps["_version"], multitap_version)
 		return Def.ActorFrame{}
 	end
+	-- Data version minor can't be greater than parser version minor
 	if (multitaps["_version"][1] == multitap_version[1]) and 
 		(multitaps["_version"][2] > multitap_version[2]) then
 		version_mismatch(multitaps["_version"], multitap_version)
@@ -132,7 +206,10 @@ end
 
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 --
--- holh fucf?
+-- 		holh fucf?
+--
+--
+-- 													HOLKY FUCY???
 --
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 
@@ -145,21 +222,21 @@ MYSTERIOUS_VERSION_DEPENDENT_RADIAN_POLTERGEIST = (string.sub(sm_version, 1, 3) 
 --
 --[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--[[##]]--
 
-local BPS = GAMESTATE:GetSongBPS()
-
 local multitap_parent = Def.ActorFrame {
 	OnCommand = function(self)
 		self:sleep(1000);
 	end
 };
 
-local multitap_error = false
-local multitap_previsible = 8
-local multitap_basebounce = 1.5
-local multitap_elasticity = 1.1
-local multitap_squishy = 0.3
-local multitap_splines_calc = {false, false}
+-- Controls for tweaking visual behavior of multitaps
+local multitap_error = false 					-- How is multitap parsing going?
+local multitap_previsible = 8					-- Make the multitaps visible this many beats in advance of the first hit
+local multitap_basebounce = 1.5					-- Multiplier for initial bounce velocity (1x matches inbound speed)
+local multitap_elasticity = 1.05				-- Subsequent bounces get their rebound speed multiplied by this
+local multitap_squishy = 0.2					-- Cartoonishly squish the arrow when traveling slowly and expand when fast.
+local multitap_splines_calc = {false, false}	-- Spline Times EX should have stayed in pop'n 8. and that's the tea
 
+-- Gotta know how many of these to make.
 local multitap_max = 0
 for _,mt_list in pairs(multitaps) do
 	if multitap_max < #mt_list then
@@ -187,6 +264,7 @@ local multitap_explosions = {
 }
 local multitap_fields = {}
 
+-- Slot and noteskin selection for each player.
 local multitap_chart_sel = {
 	"Hard",
 	"Hard"
@@ -196,7 +274,8 @@ local noteskin_names = {
 	"shadow"
 }
 
-
+-- Precalculate a table of quantization colors by beat fraction.
+-- Used to select a texture offset in the noteskin asset for the tap arrow.
 local qtzn_lookup = {}
 for _,qtzn in ipairs({48, 24, 16, 12, 8, 6, 4, 3, 2, 1}) do
 	for i = 0,48,(48/qtzn) do
@@ -334,6 +413,7 @@ qtzn_color_tables["vintage"]						= qtzn_color_tables["shadow"]
 --qtzn_color_tables["vivid"]
 
 local _BB = function(b)
+	-- Measure beats in increments of 192nds (= 1/48 of quarter notes).
 	return math.floor(b*48 + 0.5)
 end
 
@@ -438,7 +518,11 @@ local calc_multitap_phase = function(mt_desc, b)
 	ret.qtn = calc_qtzn(mt_taps[2])
 	ret.dif = 0
 	ret.vis = (ret.pos < multitap_previsible)
+
+	-- Start with the elasticity at the baseline,
+	-- or if the "peak" parameter is set for this multitap, substitute it directly.
 	local el = (mt_desc["peak"] and mt_taps[2]) and (mt_desc["peak"] / (mt_taps[2] - mt_taps[1])) or multitap_basebounce
+
 
 	for i = 1,#mt_taps do
 		-- Any bounce cases happen here.
@@ -446,6 +530,7 @@ local calc_multitap_phase = function(mt_desc, b)
 			break
 		end
 
+		-- Compound the elasticity, or continue to hold the peak constant.
 		el = mt_desc["peak"] and (mt_desc["peak"] / (mt_taps[i+1] - mt_taps[i])) or (el * multitap_elasticity)
 
 		-- We're assured to have an i+1 element here because
@@ -462,6 +547,8 @@ local calc_multitap_phase = function(mt_desc, b)
 	return ret
 end
 
+-- Provide a custom explosion callback message for each player.
+-- The false explosions give better visual reinforcement for multitap hits.
 for i=1,2 do
 	local pn = i
 	_G["multitap_note_callback_P"..i] = function(lane, tns, is_bright)
@@ -476,6 +563,22 @@ for i=1,2 do
 end
 
 local calc_zoom_splines = function(mt_table, pn)
+	-- Use non-beat-subtracting offset zoom splines to hide real taps.
+	--
+	-- Wait, what?
+	--
+	-- Non-beat-subtracting
+	--		Think of the spline as traveling along with the arrows, rather than
+	--		staying fixed to the player's viewable section of the chart.
+	-- Offset
+	--		Instead of overwriting the original arrow path, the spline is
+	--		applied as a change to that path. Here we use zooms of 0 or -1,
+	--		representing (1 + 0)x = visible or (1 + -1)x = invisible.
+	-- Zoom spline
+	--		Set a mathematical function that describes the scaling of an arrow
+	--		landing on any given beat.
+
+
 	-- Calculate length of spline needed.
 	local splSize = {}
 	for mti,mt_desc in ipairs(mt_table) do
@@ -504,6 +607,8 @@ local calc_zoom_splines = function(mt_table, pn)
 	nf:SetDidTapNoteCallback(_G["multitap_note_callback_P"..pn])
 
 	for lane,ncr in ipairs(ncr_table) do
+		-- Allocate spline space and set up the interpretation
+		-- (1 point per 192nd note starting at 0, non-beat-subtracting offset)
 		splHandle = ncr:GetZoomHandler()
 		splHandle:SetSplineMode('NoteColumnSplineMode_Offset')
 				 :SetSubtractSongBeat(false)
@@ -514,6 +619,9 @@ local calc_zoom_splines = function(mt_table, pn)
 		for spli = 1,splSize[lane] do
 			splObject:SetPoint(spli, {0, 0, 0})
 		end
+
+		-- Set every 192nd note within the multitap region to offset zoom by -1
+		-- (i.e., hide the note by zooming it away)
 		for mti,mt_desc in ipairs(mt_table) do
 			if (mt_desc.lane == lane) and (#mt_desc.taps > 0) then
 				for spli=_BB(mt_desc.taps[1]),_BB(mt_desc.taps[#mt_desc.taps]) do
@@ -522,6 +630,8 @@ local calc_zoom_splines = function(mt_table, pn)
 				end
 			end
 		end
+
+		-- Calculate and apply spline
 		splObject:Solve()
 	end
 end
@@ -538,26 +648,15 @@ local lane_permute = function(pops, l)
 
 	return lanes[l]
 end
-local lane_rotation = {90, 0, 180, 270}
-
-local calc_xmod = function(pops, BPS)
-	-- Convert approach distance into (approximate) beats by using the scroll speed.
-	-- Any boost-style mods will heckify this up
-	local xmod 	= pops:XMod()
-	local mmod 	= pops:MMod()
-	local cmod	= pops:CMod()
-	if mmod then
-		return mmod / (BPS * 60)
-	end
-	if xmod then
-		return xmod
-	end
-	if cmod then
-		return cmod / (BPS * 60)
-	end
-end
+local lane_rotation = {90, 0, 180, 270}					-- Give a tap note actor directions. It lost its GPS and has no concept of "land marks"
 
 local copy_transforms = function(dst, src)
+	-- All the
+	-- Small things
+	-- dst gets
+	-- What src brings
+	-- Tap, fake, or lift
+	-- Transform your shit
 	dst:x(src:GetX())
 	   :y(src:GetY())
 	   :z(src:GetZ())
@@ -582,6 +681,8 @@ local __SCALE = function(x, l1, h1, l2, h2)
 end
 
 --[[
+	See also (in the stepmania source code):
+
 	PlayerNoteFieldPositioner()
 	PushPlayerMatrix()
 	LoadMenuPerspective(
@@ -593,15 +694,19 @@ end
 	)
 ]]--
 
-
 local copy_transforms_player = function(dst, pp, skew, tilt, reverse)
+	-- I probably ought to refactor this code a bit to reduce the parameter bus
+	-- but we all goin to school today!! get your notebooks and noteskins
+
 	skew = skew or 0.0
 	tilt = tilt or 0.0
 	reverse = reverse or false
 
+	-- you know we could just have a god damn API call for this
+	-- "I don't see a use case" yeah because your FOV is only 45 degrees!! owned
 	local fov_in = 45
 	local vpx_in = __SCALE(skew, 0.1, 1.0, pp:GetX(), SCREEN_CENTER_X)
-	local vpy_in = pp:GetY() + CENTER_Y_FOR_DILLWEEDS_ONLY --__SCALE(tilt, 0.1, 1.0, 10, 60)
+	local vpy_in = pp:GetY() + CENTER_Y_FOR_DILLWEEDS_ONLY
 	--Trace("### ... "..vpx_in..", "..vpy_in)
 
 	local reverse_mult = (reverse and -1 or 1)
@@ -616,16 +721,14 @@ local copy_transforms_player = function(dst, pp, skew, tilt, reverse)
 		yoff_for_dumbdumbs_only = __SCALE(tilt, 0, -1, 0, -20) * reverse_mult
 	end
 
+	-- "The iniquity of the parents on the children, and the children's 
+	-- children, to the third and the fourth generation." -- Exodus 34:7
 	dst:GetParent():x(pp:GetX())
 				   :y(pp:GetY())
 				   :z(pp:GetZ())
-
 	-- FOV here stands for "fuck off, venerated_stepmania_developers"
-	-- TODO: account for the skewing perspective mods (Incoming & Space)
-	   :fov(fov_in)
-	   :vanishpoint(vpx_in, vpy_in)
---	dst:fov(fov_in)
---	   :vanishpoint(vpx_in, vpy_in)
+	   			   :fov(fov_in)
+	   			   :vanishpoint(vpx_in, vpy_in)
 
     nf = pp:GetChild("NoteField")
 	dst:x(nf:GetX())
@@ -644,11 +747,17 @@ local copy_transforms_arrow = function(dst, arrow_only, ps, lane, beat, pos, app
 	-- Additional zoom is multiplied.
 	-- It's Only Natural
 
+	-- For when the recipe calls for "one clove of garlic" and
+	-- you know that isn't right
 	apply_extra = apply_extra and apply_extra or {}
 
+	-- Each arrow in its travels acquires a mystical quantity "YOffset",
+	-- which dictates its location along the arrow path and when various
+	-- arrow effects are applied.
 	local y_off = ArrowEffects.GetYOffset(ps, lane, beat + pos) - ArrowEffects.GetYOffset(ps, lane, beat)
 
 	if arrow_only then
+		-- Don't rotate the multitap countdown.
 		dst:rotationx(ArrowEffects.GetRotationX(ps, y_off, 0, lane) 		+ (apply_extra["rotationx"] and apply_extra["rotationx"] or 0) + MYSTERIOUS_VERSION_DEPENDENT_RADIAN_POLTERGEIST)	-- ??????
 		   :rotationy(ArrowEffects.GetRotationY(ps, y_off, lane) 			+ (apply_extra["rotationy"] and apply_extra["rotationy"] or 0))
 		   :rotationz(ArrowEffects.GetRotationZ(ps, beat+pos, false, lane) 	+ (apply_extra["rotationz"] and apply_extra["rotationz"] or 0))
@@ -666,15 +775,6 @@ local copy_transforms_arrow = function(dst, arrow_only, ps, lane, beat, pos, app
 end
 
 
-local TEST_px_per_beat = SCREEN_HEIGHT * 0.5
-local TEST_px_per_lane = 64
-local TEST_center_x = SCREEN_WIDTH * 0.75
-local TEST_zero_y = 160
-local TEST_zoom_count = 1
-local TEST_squishy = 0.2
-
-local TEST_last_beat = 4
-
 local multitap_update_function = function()
 	local status = 1
 --	local status, errmsg = pcall( function() -- begin pcall()
@@ -686,19 +786,14 @@ local multitap_update_function = function()
 			local ps 	= GAMESTATE:GetPlayerState('PlayerNumber_P'..pn)
 			local pp 	= SCREENMAN:GetTopScreen():GetChild('PlayerP'..pn)
 			local pops 	= ps:GetPlayerOptions("ModsLevel_Song")
-			local scl_m = 1.0 - 0.5*pops:Mini()		-- Scaling of notes due to application of Mini
-													-- TODO: replace with ArrowEffects/spline acquisition?
-
-			-- TESTING ONLY 
-			-- pops:Tilt(1.5*math.sin(beat*math.pi/8.0)*(pn==2 and 1 or -1), 1000.0)
-			-- pops:Skew(1.5*math.cos(beat*math.pi/8.0)*(pn==2 and 1 or -1), 1000.0)
-			-- pops:Roll((pn==2 and 1 or -1), 1000.0)
 
 			-- This is a convenient enough spot to do just-in-time one-time initialization lol
 			if not multitap_splines_calc[pn] then
+				-- Select the multitap list that matches the current chart slot.
 				full_chart_name = GAMESTATE:GetCurrentSteps(pn-1):GetDifficulty()
 				multitap_chart_sel[pn] = string.sub(full_chart_name, 12)
 
+				-- Calculate vanishing splines for real taps in multitap regions.
 				calc_zoom_splines(multitaps[multitap_chart_sel[pn]], pn)
 				multitap_splines_calc[pn] = true
 			end
@@ -724,14 +819,20 @@ local multitap_update_function = function()
 				local show_false_explosion = {false, false, false, false}
 
 				for mti,mt_desc in ipairs(multitaps[multitap_chart_sel[pn]]) do
+					-- I just wanna know how to present a multitap at this time.
+					-- Let someone else do the calculations
 					mt_stats = calc_multitap_phase(mt_desc, beat)
 					
 					local lperm = lane_permute(pops, mt_desc.lane)		-- Where does this arrow actually land?
 
 					if mt_stats.vis then
 						--Trace("??? "..pp:GetChild("NoteField"):GetY())
-						--Trace("!!! reproach "..pn..", "..mti.." @ "..beat.." + "..mt_stats.pos.." -> "..y_off.." ("..pos_x..", "..pos_y..", "..pos_z..") x "..scl_m)
+						--Trace("!!! reproach "..pn..", "..mti.." @ "..beat.." + "..mt_stats.pos.." -> "..y_off.." ("..pos_x..", "..pos_y..", "..pos_z..")")
 
+						-- Show the multitap.
+						--		Turn the arrow actor to the right lane direction
+						--		Dim the arrow to make the countdown stand out initially
+						--		Set the arrow color to the right quantization
 						multitap_actors[pn][mti]["frame"]:visible(true)
 						multitap_actors[pn][mti]["arrow"]:baserotationz(lane_rotation[lperm])
 														 :diffuse(lerp_color(mt_stats.dif, color("#666666"), color("#ffffff")))
@@ -740,6 +841,8 @@ local multitap_update_function = function()
 							tex_color_interval["y"] * qtzn_tex[mt_stats.qtc]
 							)
 
+						-- To make the multitap convincing, spoof the transformation matrices
+						-- and color modifiers from the same calculations as a real tap note.
 						copy_transforms_arrow(
 							multitap_actors[pn][mti]["frame"], false,
 							ps,
@@ -761,14 +864,21 @@ local multitap_update_function = function()
 						show_false_explosion[lperm] = true
 
 						if mt_stats.rem > 1 then
+							-- Show the countdown until this multitap degrades into a regular tap
+							-- (i.e., 1 hit left)
+
+							-- Use color tables to coordinate with the noteskin and quantization.
 							local noteskin_name = string.lower(noteskin_names[pn])
 							local color_pair = qtzn_color_tables["vivid"][1]
 							if qtzn_color_tables[noteskin_name] and not tex_color_is_rhythm then
 								color_pair = qtzn_color_tables[noteskin_name][qtzn_tex[mt_stats.qtn]+1]
 							end
+
+							-- Set the text actor up with the right number, and a pulsating
+							-- color effect similar to what you'd see on most tap notes.
 							multitap_actors[pn][mti]["count"]:visible(true)
 															 :settext(mt_stats.rem)
-															 :zoom(TEST_zoom_count)
+															 :zoom(1)
 															 :diffuseramp()
 															 :effectclock("beat")
 															 :effectcolor1(color("#"..color_pair[1]))
@@ -784,10 +894,14 @@ local multitap_update_function = function()
 				for lane=1,4 do
 					local lperm = lane_permute(pops, lane)		-- Where does this arrow actually land?
 
-					local ex_pos_x = ArrowEffects.GetXPos(ps, lperm, 0) --+ pp:GetChild("NoteField"):GetX()
-					local ex_pos_y = ArrowEffects.GetYPos(ps, lperm, 0) --+ pp:GetChild("NoteField"):GetY()
-					local ex_pos_z = ArrowEffects.GetZPos(ps, lperm, 0) --+ pp:GetChild("NoteField"):GetZ()
+					-- Show the spoofed explosion if we need it, and make sure it's
+					-- in the right spot.
+					local ex_pos_x = ArrowEffects.GetXPos(ps, lperm, 0)
+					local ex_pos_y = ArrowEffects.GetYPos(ps, lperm, 0)
+					local ex_pos_z = ArrowEffects.GetZPos(ps, lperm, 0)
 
+					-- TODO: I guess I could incorporate individual column zoom
+					-- into this too, but no default mods affect that.
 					multitap_explosions[pn][lperm]:xy(ex_pos_x, ex_pos_y)
 												  :z(ex_pos_z)
 												  :baserotationz(lane_rotation[lperm])
@@ -819,6 +933,8 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 	local noteskin_name = pops:NoteSkin()
 	noteskin_names[pn] = noteskin_name
 
+	-- Build out the bags of holding for all the multitap-related actors
+	-- (explosions per lane, frames that hold arrows and countdowns)
 	local multitap_prep = Def.ActorFrame {
 		Name="MultitapFrameP"..pn,
 		InitCommand = function(self)
@@ -826,20 +942,12 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 		OnCommand = function(self)
 			multitap_fields[pn] = self
 		end,
-
-		--[[
-		Def.Sprite {
-			Texture="britneyflat.png",
-			OnCommand=function(self)
-				self:diffusealpha(0.5)
-					:zoomtowidth(256)
-					:zoomtoheight(GRAY_ARROWS_Y_REVERSE - GRAY_ARROWS_Y_STANDARD)
-			end,
-		},
-		]]--
 	}
 
 	for lane=1,4 do
+		-- All noteskins should have a suitable actor that accommodates
+		-- explosions of all grades.
+		-- If this assumption fails, I wanna know about it :P
 		multitap_prep[#multitap_prep+1] = NOTESKIN:LoadActorForNoteSkin("Down", "Explosion", noteskin_name)..{
 			Name="MultitapExplosionP"..pn.."_"..lane,
 			InitCommand=function(self)
@@ -849,12 +957,13 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 				self:visible(true)
 				--Trace("=== Added multitap actor explosion for P"..pn..", lane "..lane)
 			end,
-			--W1Command=NOTESKIN:GetMetricAForNoteSkin("GhostArrowBright", "W1Command", noteskin_name),
-			--W1Command=cmd(diffuse,1.0,1.0,1.0,1;zoom,1;linear,0.06;zoom,1.1;linear,0.06;diffusealpha,0),
 		}
 	end
 	
 	for mti = 1,multitap_max do
+		-- Each multitap is an ActorFrame with two elements:
+		-- 		A tap note loaded from the ative noteskin
+		--		A text actor to show the remaining tap count
 		multitap_prep[#multitap_prep+1] = Def.ActorFrame {
 			Name="MultitapP"..pn.."_"..mti,
 			InitCommand=function(self)
@@ -880,6 +989,11 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 				end,
 			},
 			Def.BitmapText {
+				-- You can switch the font out, but I recommend:
+				-- *	36-48px (42px is ideal; keep in mind arrows are 64px)
+				-- *	Generate it with 10px+ padding and add a nice bold
+				--		border in post, at least 4px, to distinguish it well
+				--		from the underlying arrow
 				Name="MultitapTextP"..pn.."_"..mti,
 				Font="_komika axis 42px.ini",
 				Text="",
@@ -890,7 +1004,8 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 
 					multitap_actors[pn][i]["count"] = self
 					self:visible(false)
-						:z(10.0)
+						:z(10.0)						-- Ensure depth z-testing
+														-- (even though SM5 defaults to init order because That`s Great!)
 						:strokecolor(color("#000000"))
 					--Trace("=== Added multitap actor count for P"..pn..", index "..i)
 				end,
@@ -898,6 +1013,9 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 		}
 	end
 
+	-- The multitap bags of holding need one level of parent to handle 
+	-- FOV and positioning in the most accurate way.
+	-- I probably could have used a wrapper state here...
 	multitap_parent[#multitap_parent+1] = Def.ActorFrame{multitap_prep}
 end
 
@@ -906,6 +1024,7 @@ multitap_parent[#multitap_parent+1] = Def.ActorFrame {
 	InitCommand=function(self)	
 		Trace("### im alive")
 
+		-- Do all of the it
 		self:SetUpdateFunction(multitap_update_function)
 	end,
 
@@ -916,4 +1035,5 @@ multitap_parent[#multitap_parent+1] = Def.ActorFrame {
 	}
 }
 
+-- Done!
 return multitap_parent
