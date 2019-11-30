@@ -868,7 +868,7 @@ local multitap_update_function = function()
 							-- (i.e., 1 hit left)
 
 							-- Use color tables to coordinate with the noteskin and quantization.
-							local noteskin_name = string.lower(noteskin_names[pn])
+							local noteskin_name = noteskin_names[pn]
 							local color_pair = qtzn_color_tables["vivid"][1]
 							if qtzn_color_tables[noteskin_name] and not tex_color_is_rhythm then
 								color_pair = qtzn_color_tables[noteskin_name][qtzn_tex[mt_stats.qtn]+1]
@@ -930,7 +930,7 @@ for _,pe in pairs(GAMESTATE:GetEnabledPlayers()) do
 	local pn = tonumber(string.match(pe, "[0-9]+"))
 
 	local pops = GAMESTATE:GetPlayerState(pe):GetPlayerOptions("ModsLevel_Song")
-	local noteskin_name = pops:NoteSkin()
+	local noteskin_name = string.lower(pops:NoteSkin())
 	noteskin_names[pn] = noteskin_name
 
 	-- Build out the bags of holding for all the multitap-related actors
